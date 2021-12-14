@@ -1,0 +1,642 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP @generated
+
+exports[`Wallet with BCH balances 1`] = `
+Array [
+  <div
+    className="sc-jKJlTe klaRFe"
+  >
+    You need some 
+    XEC
+     in your wallet to create tokens.
+  </div>,
+  <div
+    className="sc-dxgOiQ eYoaKZ"
+  >
+    0
+     
+    XEC
+  </div>,
+  <div>
+    <div
+      className="ant-alert ant-alert-warning ant-alert-with-description"
+      data-show={true}
+      role="alert"
+      style={
+        Object {
+          "marginBottom": "12px",
+        }
+      }
+    >
+      <span
+        aria-label="exclamation-circle"
+        className="anticon anticon-exclamation-circle ant-alert-icon"
+        role="img"
+      >
+        <svg
+          aria-hidden="true"
+          data-icon="exclamation-circle"
+          fill="currentColor"
+          focusable="false"
+          height="1em"
+          viewBox="64 64 896 896"
+          width="1em"
+        >
+          <path
+            d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"
+          />
+          <path
+            d="M464 688a48 48 0 1096 0 48 48 0 10-96 0zm24-112h48c4.4 0 8-3.6 8-8V296c0-4.4-3.6-8-8-8h-48c-4.4 0-8 3.6-8 8v272c0 4.4 3.6 8 8 8z"
+          />
+        </svg>
+      </span>
+      <div
+        className="ant-alert-content"
+      >
+        <div
+          className="ant-alert-message"
+        />
+        <div
+          className="ant-alert-description"
+        >
+          If you would like to request an icon for an eToken that has already been created, please email icons@e.cash.
+        </div>
+      </div>
+    </div>
+  </div>,
+  <div
+    className="ant-collapse ant-collapse-icon-position-left sc-jTzLTM fDvaHF"
+    role={null}
+    style={
+      Object {
+        "marginBottom": "24px",
+      }
+    }
+  >
+    <div
+      className="ant-collapse-item ant-collapse-item-disabled"
+    >
+      <div
+        aria-expanded={false}
+        className="ant-collapse-header"
+        onClick={[Function]}
+        onKeyPress={[Function]}
+        role="button"
+        tabIndex={-1}
+      >
+        <span
+          aria-label="right"
+          className="anticon anticon-right ant-collapse-arrow"
+          role="img"
+        >
+          <svg
+            aria-hidden="true"
+            data-icon="right"
+            fill="currentColor"
+            focusable="false"
+            height="1em"
+            viewBox="64 64 896 896"
+            width="1em"
+          >
+            <path
+              d="M765.7 486.8L314.9 134.7A7.97 7.97 0 00302 141v77.3c0 4.9 2.3 9.6 6.1 12.6l360 281.1-360 281.1c-3.9 3-6.1 7.7-6.1 12.6V883c0 6.7 7.7 10.4 12.9 6.3l450.8-352.1a31.96 31.96 0 000-50.4z"
+            />
+          </svg>
+        </span>
+        Create eToken
+      </div>
+    </div>
+  </div>,
+  <p
+    className="sc-hMqMXs blALfb"
+  >
+    You need at least
+     
+    5.5
+     
+    XEC
+     (
+    $ 
+    NaN
+     
+    USD
+    ) to create a token
+  </p>,
+  "No ",
+  "eToken",
+  " tokens in this wallet",
+]
+`;
+
+exports[`Wallet with BCH balances and tokens 1`] = `
+Array [
+  <div
+    className="sc-jKJlTe klaRFe"
+  >
+    You need some 
+    XEC
+     in your wallet to create tokens.
+  </div>,
+  <div
+    className="sc-dxgOiQ eYoaKZ"
+  >
+    0
+     
+    XEC
+  </div>,
+  <div>
+    <div
+      className="ant-alert ant-alert-warning ant-alert-with-description"
+      data-show={true}
+      role="alert"
+      style={
+        Object {
+          "marginBottom": "12px",
+        }
+      }
+    >
+      <span
+        aria-label="exclamation-circle"
+        className="anticon anticon-exclamation-circle ant-alert-icon"
+        role="img"
+      >
+        <svg
+          aria-hidden="true"
+          data-icon="exclamation-circle"
+          fill="currentColor"
+          focusable="false"
+          height="1em"
+          viewBox="64 64 896 896"
+          width="1em"
+        >
+          <path
+            d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"
+          />
+          <path
+            d="M464 688a48 48 0 1096 0 48 48 0 10-96 0zm24-112h48c4.4 0 8-3.6 8-8V296c0-4.4-3.6-8-8-8h-48c-4.4 0-8 3.6-8 8v272c0 4.4 3.6 8 8 8z"
+          />
+        </svg>
+      </span>
+      <div
+        className="ant-alert-content"
+      >
+        <div
+          className="ant-alert-message"
+        />
+        <div
+          className="ant-alert-description"
+        >
+          If you would like to request an icon for an eToken that has already been created, please email icons@e.cash.
+        </div>
+      </div>
+    </div>
+  </div>,
+  <div
+    className="ant-collapse ant-collapse-icon-position-left sc-jTzLTM fDvaHF"
+    role={null}
+    style={
+      Object {
+        "marginBottom": "24px",
+      }
+    }
+  >
+    <div
+      className="ant-collapse-item ant-collapse-item-disabled"
+    >
+      <div
+        aria-expanded={false}
+        className="ant-collapse-header"
+        onClick={[Function]}
+        onKeyPress={[Function]}
+        role="button"
+        tabIndex={-1}
+      >
+        <span
+          aria-label="right"
+          className="anticon anticon-right ant-collapse-arrow"
+          role="img"
+        >
+          <svg
+            aria-hidden="true"
+            data-icon="right"
+            fill="currentColor"
+            focusable="false"
+            height="1em"
+            viewBox="64 64 896 896"
+            width="1em"
+          >
+            <path
+              d="M765.7 486.8L314.9 134.7A7.97 7.97 0 00302 141v77.3c0 4.9 2.3 9.6 6.1 12.6l360 281.1-360 281.1c-3.9 3-6.1 7.7-6.1 12.6V883c0 6.7 7.7 10.4 12.9 6.3l450.8-352.1a31.96 31.96 0 000-50.4z"
+            />
+          </svg>
+        </span>
+        Create eToken
+      </div>
+    </div>
+  </div>,
+  <p
+    className="sc-hMqMXs blALfb"
+  >
+    You need at least
+     
+    5.5
+     
+    XEC
+     (
+    $ 
+    NaN
+     
+    USD
+    ) to create a token
+  </p>,
+  "No ",
+  "eToken",
+  " tokens in this wallet",
+]
+`;
+
+exports[`Wallet with BCH balances and tokens and state field 1`] = `
+Array [
+  <div
+    className="sc-dxgOiQ eYoaKZ"
+  >
+    0.06
+     
+    XEC
+  </div>,
+  <div
+    className="sc-ckVGcZ hCLjtP"
+  >
+    $ 
+    NaN
+     
+    USD
+  </div>,
+  <div>
+    <div
+      className="ant-alert ant-alert-warning ant-alert-with-description"
+      data-show={true}
+      role="alert"
+      style={
+        Object {
+          "marginBottom": "12px",
+        }
+      }
+    >
+      <span
+        aria-label="exclamation-circle"
+        className="anticon anticon-exclamation-circle ant-alert-icon"
+        role="img"
+      >
+        <svg
+          aria-hidden="true"
+          data-icon="exclamation-circle"
+          fill="currentColor"
+          focusable="false"
+          height="1em"
+          viewBox="64 64 896 896"
+          width="1em"
+        >
+          <path
+            d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"
+          />
+          <path
+            d="M464 688a48 48 0 1096 0 48 48 0 10-96 0zm24-112h48c4.4 0 8-3.6 8-8V296c0-4.4-3.6-8-8-8h-48c-4.4 0-8 3.6-8 8v272c0 4.4 3.6 8 8 8z"
+          />
+        </svg>
+      </span>
+      <div
+        className="ant-alert-content"
+      >
+        <div
+          className="ant-alert-message"
+        />
+        <div
+          className="ant-alert-description"
+        >
+          If you would like to request an icon for an eToken that has already been created, please email icons@e.cash.
+        </div>
+      </div>
+    </div>
+  </div>,
+  <div
+    className="ant-collapse ant-collapse-icon-position-left sc-jTzLTM RrYKP"
+    role={null}
+    style={
+      Object {
+        "marginBottom": "24px",
+      }
+    }
+  >
+    <div
+      className="ant-collapse-item"
+    >
+      <div
+        aria-expanded={false}
+        className="ant-collapse-header"
+        onClick={[Function]}
+        onKeyPress={[Function]}
+        role="button"
+        tabIndex={0}
+      >
+        <span
+          aria-label="right"
+          className="anticon anticon-right ant-collapse-arrow"
+          role="img"
+        >
+          <svg
+            aria-hidden="true"
+            data-icon="right"
+            fill="currentColor"
+            focusable="false"
+            height="1em"
+            viewBox="64 64 896 896"
+            width="1em"
+          >
+            <path
+              d="M765.7 486.8L314.9 134.7A7.97 7.97 0 00302 141v77.3c0 4.9 2.3 9.6 6.1 12.6l360 281.1-360 281.1c-3.9 3-6.1 7.7-6.1 12.6V883c0 6.7 7.7 10.4 12.9 6.3l450.8-352.1a31.96 31.96 0 000-50.4z"
+            />
+          </svg>
+        </span>
+        Create eToken
+      </div>
+    </div>
+  </div>,
+  <div>
+    <a
+      href="/send-token/bd1acc4c986de57af8d6d2a64aecad8c30ee80f37ae9d066d758923732ddc9ba"
+      onClick={[Function]}
+    >
+      <div
+        className="sc-hSdWYo tUbiI"
+      >
+        <div
+          className="sc-kkGfuU dSxERO"
+        />
+        <div
+          className="sc-iAyFgw clPeTt"
+        >
+          6.001
+           
+          <strong>
+            TBS
+          </strong>
+        </div>
+      </div>
+    </a>
+  </div>,
+]
+`;
+
+exports[`Wallet without BCH balance 1`] = `
+Array [
+  <div
+    className="sc-jKJlTe klaRFe"
+  >
+    You need some 
+    XEC
+     in your wallet to create tokens.
+  </div>,
+  <div
+    className="sc-dxgOiQ eYoaKZ"
+  >
+    0
+     
+    XEC
+  </div>,
+  <div>
+    <div
+      className="ant-alert ant-alert-warning ant-alert-with-description"
+      data-show={true}
+      role="alert"
+      style={
+        Object {
+          "marginBottom": "12px",
+        }
+      }
+    >
+      <span
+        aria-label="exclamation-circle"
+        className="anticon anticon-exclamation-circle ant-alert-icon"
+        role="img"
+      >
+        <svg
+          aria-hidden="true"
+          data-icon="exclamation-circle"
+          fill="currentColor"
+          focusable="false"
+          height="1em"
+          viewBox="64 64 896 896"
+          width="1em"
+        >
+          <path
+            d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"
+          />
+          <path
+            d="M464 688a48 48 0 1096 0 48 48 0 10-96 0zm24-112h48c4.4 0 8-3.6 8-8V296c0-4.4-3.6-8-8-8h-48c-4.4 0-8 3.6-8 8v272c0 4.4 3.6 8 8 8z"
+          />
+        </svg>
+      </span>
+      <div
+        className="ant-alert-content"
+      >
+        <div
+          className="ant-alert-message"
+        />
+        <div
+          className="ant-alert-description"
+        >
+          If you would like to request an icon for an eToken that has already been created, please email icons@e.cash.
+        </div>
+      </div>
+    </div>
+  </div>,
+  <div
+    className="ant-collapse ant-collapse-icon-position-left sc-jTzLTM fDvaHF"
+    role={null}
+    style={
+      Object {
+        "marginBottom": "24px",
+      }
+    }
+  >
+    <div
+      className="ant-collapse-item ant-collapse-item-disabled"
+    >
+      <div
+        aria-expanded={false}
+        className="ant-collapse-header"
+        onClick={[Function]}
+        onKeyPress={[Function]}
+        role="button"
+        tabIndex={-1}
+      >
+        <span
+          aria-label="right"
+          className="anticon anticon-right ant-collapse-arrow"
+          role="img"
+        >
+          <svg
+            aria-hidden="true"
+            data-icon="right"
+            fill="currentColor"
+            focusable="false"
+            height="1em"
+            viewBox="64 64 896 896"
+            width="1em"
+          >
+            <path
+              d="M765.7 486.8L314.9 134.7A7.97 7.97 0 00302 141v77.3c0 4.9 2.3 9.6 6.1 12.6l360 281.1-360 281.1c-3.9 3-6.1 7.7-6.1 12.6V883c0 6.7 7.7 10.4 12.9 6.3l450.8-352.1a31.96 31.96 0 000-50.4z"
+            />
+          </svg>
+        </span>
+        Create eToken
+      </div>
+    </div>
+  </div>,
+  <p
+    className="sc-hMqMXs blALfb"
+  >
+    You need at least
+     
+    5.5
+     
+    XEC
+     (
+    $ 
+    NaN
+     
+    USD
+    ) to create a token
+  </p>,
+  "No ",
+  "eToken",
+  " tokens in this wallet",
+]
+`;
+
+exports[`Without wallet defined 1`] = `
+Array [
+  <div
+    className="sc-jKJlTe klaRFe"
+  >
+    You need some 
+    XEC
+     in your wallet to create tokens.
+  </div>,
+  <div
+    className="sc-dxgOiQ eYoaKZ"
+  >
+    0
+     
+    XEC
+  </div>,
+  <div>
+    <div
+      className="ant-alert ant-alert-warning ant-alert-with-description"
+      data-show={true}
+      role="alert"
+      style={
+        Object {
+          "marginBottom": "12px",
+        }
+      }
+    >
+      <span
+        aria-label="exclamation-circle"
+        className="anticon anticon-exclamation-circle ant-alert-icon"
+        role="img"
+      >
+        <svg
+          aria-hidden="true"
+          data-icon="exclamation-circle"
+          fill="currentColor"
+          focusable="false"
+          height="1em"
+          viewBox="64 64 896 896"
+          width="1em"
+        >
+          <path
+            d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"
+          />
+          <path
+            d="M464 688a48 48 0 1096 0 48 48 0 10-96 0zm24-112h48c4.4 0 8-3.6 8-8V296c0-4.4-3.6-8-8-8h-48c-4.4 0-8 3.6-8 8v272c0 4.4 3.6 8 8 8z"
+          />
+        </svg>
+      </span>
+      <div
+        className="ant-alert-content"
+      >
+        <div
+          className="ant-alert-message"
+        />
+        <div
+          className="ant-alert-description"
+        >
+          If you would like to request an icon for an eToken that has already been created, please email icons@e.cash.
+        </div>
+      </div>
+    </div>
+  </div>,
+  <div
+    className="ant-collapse ant-collapse-icon-position-left sc-jTzLTM fDvaHF"
+    role={null}
+    style={
+      Object {
+        "marginBottom": "24px",
+      }
+    }
+  >
+    <div
+      className="ant-collapse-item ant-collapse-item-disabled"
+    >
+      <div
+        aria-expanded={false}
+        className="ant-collapse-header"
+        onClick={[Function]}
+        onKeyPress={[Function]}
+        role="button"
+        tabIndex={-1}
+      >
+        <span
+          aria-label="right"
+          className="anticon anticon-right ant-collapse-arrow"
+          role="img"
+        >
+          <svg
+            aria-hidden="true"
+            data-icon="right"
+            fill="currentColor"
+            focusable="false"
+            height="1em"
+            viewBox="64 64 896 896"
+            width="1em"
+          >
+            <path
+              d="M765.7 486.8L314.9 134.7A7.97 7.97 0 00302 141v77.3c0 4.9 2.3 9.6 6.1 12.6l360 281.1-360 281.1c-3.9 3-6.1 7.7-6.1 12.6V883c0 6.7 7.7 10.4 12.9 6.3l450.8-352.1a31.96 31.96 0 000-50.4z"
+            />
+          </svg>
+        </span>
+        Create eToken
+      </div>
+    </div>
+  </div>,
+  <p
+    className="sc-hMqMXs blALfb"
+  >
+    You need at least
+     
+    5.5
+     
+    XEC
+     (
+    $ 
+    NaN
+     
+    USD
+    ) to create a token
+  </p>,
+  "No ",
+  "eToken",
+  " tokens in this wallet",
+]
+`;
