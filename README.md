@@ -74,7 +74,7 @@ docker-compose build
 docker-compose up
 ```
 
-## Redundant APIs
+## Bcash full node HTTP API
 
 Cashtab accepts multiple instances of `bcash` HTTP API as its backend. Input your desired API URL 
 into the `REACT_APP_BCASH_API` variable. For example
