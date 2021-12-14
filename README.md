@@ -79,7 +79,7 @@ docker-compose up
 Cashtab accepts multiple instances of `bcash` HTTP API as its backend. Input your desired API URLs separated commas into the `REACT_APP_BCASH_API` variable. For example
 
 ```
-REACT_APP_BCHA_APIS=https://rest.kingbch.com/v4/
+REACT_APP_BCASH_API=https://ecash.badger.cash:8332
 ```
 
 Navigate to `localhost:8080` to see the app.
