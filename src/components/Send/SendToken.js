@@ -35,12 +35,10 @@ const SendToken = ({ tokenId, jestBCH, passLoadingStatus }) => {
     const { wallet, apiError } = React.useContext(WalletContext);
     const walletState = getWalletState(wallet);
     const { tokens, slpBalancesAndUtxos } = walletState;
-    console.log('tokens', tokens);
     const token = tokens.find(token => token.tokenId === tokenId);
     const tokenFormattedBalance = new BigNumber(token.balance)
         .div(10 ** token.info.decimals)
         .toString();
-    console.log('tokenFormattedBalance', tokenFormattedBalance);
 
     const [tokenStats, setTokenStats] = useState(null);
     const [queryStringText, setQueryStringText] = useState(null);
