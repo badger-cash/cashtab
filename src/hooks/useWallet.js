@@ -98,58 +98,6 @@ const useWallet = () => {
         setWallet(wallet);
     };
 
-    const haveUtxosChanged = (wallet, utxos, previousUtxos) => {
-        // Relevant points for this array comparing exercise
-        // https://stackoverflow.com/questions/13757109/triple-equal-signs-return-false-for-arrays-in-javascript-why
-        // https://stackoverflow.com/questions/7837456/how-to-compare-arrays-in-javascript
-
-        // If this is initial state
-        if (utxos === null) {
-            // Then make sure to get slpBalancesAndUtxos
-            return true;
-        }
-        // If this is the first time the wallet received utxos
-        if (typeof utxos === 'undefined') {
-            // Then they have certainly changed
-            return true;
-        }
-        if (typeof previousUtxos === 'undefined') {
-            // Compare to what you have in localStorage on startup
-            // If previousUtxos are undefined, see if you have previousUtxos in wallet state
-            // If you do, and it has everything you need, set wallet state with that instead of calling hydrateUtxos on all utxos
-            if (isValidStoredWallet(wallet)) {
-                // Convert all the token balance figures to big numbers
-                const liveWalletState = loadStoredWallet(wallet.state);
-                wallet.state = liveWalletState;
-
-                return setWallet(wallet);
-            }
-            // If wallet in storage is a legacy wallet or otherwise does not have all state fields,
-            // then assume utxos have changed
-            return true;
-        }
-        // return true for empty array, since this means you definitely do not want to skip the next API call
-        if (utxos && utxos.length === 0) {
-            return true;
-        }
-
-        // If wallet is valid, compare what exists in written wallet state instead of former api call
-        let utxosToCompare = previousUtxos;
-        if (isValidStoredWallet(wallet)) {
-            try {
-                utxosToCompare = wallet.state.utxos;
-            } catch (err) {
-                console.log(`Error setting utxos to wallet.state.utxos`, err);
-                console.log(`Wallet at err`, wallet);
-                // If this happens, assume utxo set has changed
-                return true;
-            }
-        }
-
-        // Compare utxo sets
-        return !isEqual(utxos, utxosToCompare);
-    };
-
     const update = async ({ wallet }) => {
         //console.log(`tick()`);
         //console.time("update");
@@ -162,6 +110,8 @@ const useWallet = () => {
                 wallet.Path145.cashAddress,
                 wallet.Path1899.cashAddress,
             ];
+
+            console.log('wallet', wallet);
 
             const utxosBcash = await getUtxosBcash(cashAddresses);
 

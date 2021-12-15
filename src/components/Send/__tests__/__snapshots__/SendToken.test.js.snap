@@ -1,13 +1,11 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP @generated
-
-exports[`Wallet with BCH balances and tokens 1`] = `null`;
+// Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`Wallet with BCH balances and tokens and state field 1`] = `
 Array [
   <div
     className="sc-cSHVUG lalYdv"
   >
-    6.001
+    6.001e-9
      
     TBS
   </div>,
@@ -47,9 +45,6 @@ Array [
       <div
         className="ant-alert-content"
       >
-        <div
-          className="ant-alert-message"
-        />
         <div
           className="ant-alert-description"
         >
@@ -176,9 +171,10 @@ Array [
                 </div>
               </div>
               <div
-                className="ant-form-item-explain"
+                className="ant-form-item-explain ant-form-item-explain-connected"
               >
                 <div
+                  className=""
                   role="alert"
                 >
                   
@@ -254,9 +250,10 @@ Array [
                 </div>
               </div>
               <div
-                className="ant-form-item-explain"
+                className="ant-form-item-explain ant-form-item-explain-connected"
               >
                 <div
+                  className=""
                   role="alert"
                 >
                   
@@ -281,9 +278,116 @@ Array [
           </button>
         </div>
       </form>
+      <div
+        className="ant-descriptions ant-descriptions-bordered"
+      >
+        <div
+          className="ant-descriptions-header"
+        >
+          <div
+            className="ant-descriptions-title"
+          >
+            Token info for "TestBits"
+          </div>
+        </div>
+        <div
+          className="ant-descriptions-view"
+        >
+          <table>
+            <tbody>
+              <tr
+                className="ant-descriptions-row"
+              >
+                <th
+                  className="ant-descriptions-item-label"
+                  colSpan={1}
+                  style={Object {}}
+                >
+                  <span>
+                    Token ID
+                  </span>
+                </th>
+                <td
+                  className="ant-descriptions-item-content"
+                  colSpan={1}
+                  style={Object {}}
+                >
+                  <span>
+                    bd1acc4c986de57af8d6d2a64aecad8c30ee80f37ae9d066d758923732ddc9ba
+                  </span>
+                </td>
+              </tr>
+              <tr
+                className="ant-descriptions-row"
+              >
+                <th
+                  className="ant-descriptions-item-label"
+                  colSpan={1}
+                  style={Object {}}
+                >
+                  <span>
+                    Decimals
+                  </span>
+                </th>
+                <td
+                  className="ant-descriptions-item-content"
+                  colSpan={1}
+                  style={Object {}}
+                >
+                  <span>
+                    9
+                  </span>
+                </td>
+              </tr>
+              <tr
+                className="ant-descriptions-row"
+              >
+                <th
+                  className="ant-descriptions-item-label"
+                  colSpan={1}
+                  style={Object {}}
+                >
+                  <span>
+                    Document URI
+                  </span>
+                </th>
+                <td
+                  className="ant-descriptions-item-content"
+                  colSpan={1}
+                  style={Object {}}
+                >
+                  <span>
+                    https://thecryptoguy.com/
+                  </span>
+                </td>
+              </tr>
+              <tr
+                className="ant-descriptions-row"
+              >
+                <th
+                  className="ant-descriptions-item-label"
+                  colSpan={1}
+                  style={Object {}}
+                >
+                  <span>
+                    Document Hash
+                  </span>
+                </th>
+                <td
+                  className="ant-descriptions-item-content"
+                  colSpan={1}
+                  style={Object {}}
+                >
+                  <span>
+                    
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>,
 ]
 `;
-
-exports[`Without wallet defined 1`] = `null`;

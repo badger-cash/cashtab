@@ -86,7 +86,7 @@ const TextAreaLabel = styled.div`
     color: #0074c2;
     padding-left: 1px;
 `;
-// Note jestBCH is only used for unit tests; BCHJS must be mocked for jest
+
 const SendBCH = ({ passLoadingStatus }) => {
     // use balance parameters from wallet.state object and not legacy balances parameter from walletState, if user has migrated wallet
     // this handles edge case of user with old wallet who has not opened latest Cashtab version yet
@@ -938,7 +938,6 @@ SendBCH.defaultProps = {
 };
 
 SendBCH.propTypes = {
-    jestBCH: PropTypes.object,
     passLoadingStatus: PropTypes.func,
 };
 

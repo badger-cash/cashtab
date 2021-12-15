@@ -23,45 +23,6 @@ afterEach(() => {
     React.useContext = realUseContext;
 });
 
-test('Wallet without BCH balance', () => {
-    useContextMock.mockReturnValue(walletWithoutBalancesMock);
-    const component = renderer.create(
-        <ThemeProvider theme={theme}>
-            <Router>
-                <Wallet />
-            </Router>
-        </ThemeProvider>,
-    );
-    let tree = component.toJSON();
-    expect(tree).toMatchSnapshot();
-});
-
-test('Wallet with BCH balances', () => {
-    useContextMock.mockReturnValue(walletWithBalancesMock);
-    const component = renderer.create(
-        <ThemeProvider theme={theme}>
-            <Router>
-                <Wallet />
-            </Router>
-        </ThemeProvider>,
-    );
-    let tree = component.toJSON();
-    expect(tree).toMatchSnapshot();
-});
-
-test('Wallet with BCH balances and tokens', () => {
-    useContextMock.mockReturnValue(walletWithBalancesAndTokens);
-    const component = renderer.create(
-        <ThemeProvider theme={theme}>
-            <Router>
-                <Wallet />
-            </Router>
-        </ThemeProvider>,
-    );
-    let tree = component.toJSON();
-    expect(tree).toMatchSnapshot();
-});
-
 test('Wallet with BCH balances and tokens and state field', () => {
     useContextMock.mockReturnValue(walletWithBalancesAndTokensWithCorrectState);
     const component = renderer.create(

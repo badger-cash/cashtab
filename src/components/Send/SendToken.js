@@ -31,7 +31,7 @@ import {
     errorNotification,
 } from '@components/Common/Notifications';
 
-const SendToken = ({ tokenId, jestBCH, passLoadingStatus }) => {
+const SendToken = ({ tokenId, passLoadingStatus }) => {
     const { wallet, apiError } = React.useContext(WalletContext);
     const walletState = getWalletState(wallet);
     const { tokens, slpBalancesAndUtxos } = walletState;
@@ -414,7 +414,6 @@ SendToken.defaultProps = {
 
 SendToken.propTypes = {
     tokenId: PropTypes.string,
-    jestBCH: PropTypes.object,
     passLoadingStatus: PropTypes.func,
 };
 
