@@ -3,7 +3,6 @@ import renderer from 'react-test-renderer';
 import { ThemeProvider } from 'styled-components';
 import { theme } from '@assets/styles/theme';
 import Tokens from '@components/Tokens/Tokens';
-import BCHJS from '@psf/bch-js';
 import {
     walletWithBalancesAndTokens,
     walletWithBalancesMock,
@@ -42,7 +41,6 @@ afterEach(() => {
 
 test('Wallet with BCH balances and tokens and state field', () => {
     useContextMock.mockReturnValue(walletWithBalancesAndTokensWithCorrectState);
-    const testBCH = new BCHJS();
     const component = renderer.create(
         <ThemeProvider theme={theme}>
             <Router>
