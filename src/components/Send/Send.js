@@ -42,8 +42,7 @@ import {
     currency,
     isValidTokenPrefix,
     parseAddress,
-    toLegacy,
-    toLegacyArray,
+    toCleanArray,
 } from '@components/Common/Ticker.js';
 import { Event } from '@utils/GoogleAnalytics';
 import {
@@ -251,16 +250,15 @@ const SendBCH = ({ passLoadingStatus }) => {
             const { address, value } = formData;
 
             //convert each line from TextArea input
-            let addressAndValueArray = address.split('\n');
+            const addressAndValueArray = address.split('\n');
 
             try {
                 // construct array of XEC->BCH addresses due to bch-api constraint
                 let cleanAddressAndValueArray =
-                    toLegacyArray(addressAndValueArray);
+                    toCleanArray(addressAndValueArray);
 
                 const link = await sendXec(
                     wallet,
-                    slpBalancesAndUtxos.nonSlpUtxos,
                     currency.defaultFee,
                     optionalOpReturnMsg,
                     true, // indicate send mode is one to many
@@ -327,7 +325,6 @@ const SendBCH = ({ passLoadingStatus }) => {
             try {
                 const link = await sendXec(
                     wallet,
-                    slpBalancesAndUtxos.nonSlpUtxos,
                     currency.defaultFee,
                     optionalOpReturnMsg,
                     false, // sendToMany boolean flag

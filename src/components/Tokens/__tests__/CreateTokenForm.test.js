@@ -43,8 +43,7 @@ test('Wallet with BCH balances and tokens and state field', () => {
     const component = renderer.create(
         <ThemeProvider theme={theme}>
             <CreateTokenForm
-                BCH={testBCH}
-                getRestUrl={getRestUrl}
+                getBcashRestUrl={getRestUrl}
                 createToken={createToken}
                 disabled={
                     walletWithBalancesAndTokensWithCorrectState.wallet.state

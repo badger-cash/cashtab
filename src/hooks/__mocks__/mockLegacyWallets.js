@@ -5,22 +5,22 @@ export default {
         name: 'MigrationTestAlpha on Mainnet',
         Path245: {
             cashAddress:
-                'bitcoincash:qztqe8k4v8ckn8cvfxt5659nhd7dcyvxy54hkry298',
+                'ecash:qztqe8k4v8ckn8cvfxt5659nhd7dcyvxy5v6zglsrs',
             slpAddress:
-                'simpleledger:qztqe8k4v8ckn8cvfxt5659nhd7dcyvxy5evac32me',
+                'etoken:qztqe8k4v8ckn8cvfxt5659nhd7dcyvxy5zyt2fh88',
             fundingWif: 'KwgNkyijAaxFr5XQdnaYyNMXVSZobgHzSoKKfWiC3Q7Xr4n7iYMG',
             fundingAddress:
-                'simpleledger:qztqe8k4v8ckn8cvfxt5659nhd7dcyvxy5evac32me',
+                'etoken:qztqe8k4v8ckn8cvfxt5659nhd7dcyvxy5zyt2fh88',
             legacyAddress: '1EgPUfBgU7ekho3EjtGze87dRADnUE8ojP',
         },
         Path145: {
             cashAddress:
-                'bitcoincash:qq47pcxfn8n7w7jy86njd7pvgsv39l9f9v0lgx569z',
+                'ecash:qq47pcxfn8n7w7jy86njd7pvgsv39l9f9vkjud0qr4',
             slpAddress:
-                'simpleledger:qq47pcxfn8n7w7jy86njd7pvgsv39l9f9vryrap6mu',
+                'etoken:qq47pcxfn8n7w7jy86njd7pvgsv39l9f9vcv40e88z',
             fundingWif: 'L2xvTe6CdNxroR6pbdpGWNjAa55AZX5Wm59W5TXMuH31ihNJdDjt',
             fundingAddress:
-                'simpleledger:qq47pcxfn8n7w7jy86njd7pvgsv39l9f9vryrap6mu',
+                'etoken:qq47pcxfn8n7w7jy86njd7pvgsv39l9f9vcv40e88z',
             legacyAddress: '1511T3ynXKgCwXhFijCUWKuTfqbPxFV1AF',
         },
     },
@@ -31,36 +31,36 @@ export default {
         name: 'MigrationTestAlpha on Mainnet',
         Path245: {
             cashAddress:
-                'bitcoincash:qztqe8k4v8ckn8cvfxt5659nhd7dcyvxy54hkry298',
+                'ecash:qztqe8k4v8ckn8cvfxt5659nhd7dcyvxy5v6zglsrs',
             slpAddress:
-                'simpleledger:qztqe8k4v8ckn8cvfxt5659nhd7dcyvxy5evac32me',
+                'etoken:qztqe8k4v8ckn8cvfxt5659nhd7dcyvxy5zyt2fh88',
             fundingWif: 'KwgNkyijAaxFr5XQdnaYyNMXVSZobgHzSoKKfWiC3Q7Xr4n7iYMG',
             fundingAddress:
-                'simpleledger:qztqe8k4v8ckn8cvfxt5659nhd7dcyvxy5evac32me',
+                'etoken:qztqe8k4v8ckn8cvfxt5659nhd7dcyvxy5zyt2fh88',
             legacyAddress: '1EgPUfBgU7ekho3EjtGze87dRADnUE8ojP',
             publicKey:
                 '03c4a69fd90c8b196683216cffd2943a7b13b0db0812e44a4ff156ac7e03fc4ed7',
         },
         Path145: {
             cashAddress:
-                'bitcoincash:qq47pcxfn8n7w7jy86njd7pvgsv39l9f9v0lgx569z',
+                'ecash:qq47pcxfn8n7w7jy86njd7pvgsv39l9f9vkjud0qr4',
             slpAddress:
-                'simpleledger:qq47pcxfn8n7w7jy86njd7pvgsv39l9f9vryrap6mu',
+                'etoken:qq47pcxfn8n7w7jy86njd7pvgsv39l9f9vcv40e88z',
             fundingWif: 'L2xvTe6CdNxroR6pbdpGWNjAa55AZX5Wm59W5TXMuH31ihNJdDjt',
             fundingAddress:
-                'simpleledger:qq47pcxfn8n7w7jy86njd7pvgsv39l9f9vryrap6mu',
+                'etoken:qq47pcxfn8n7w7jy86njd7pvgsv39l9f9vcv40e88z',
             legacyAddress: '1511T3ynXKgCwXhFijCUWKuTfqbPxFV1AF',
             publicKey:
                 '02fe5308d77bcce825068a9e46adc6f032dbbe39167a7b6d05ac563ac71d8b186e',
         },
         Path1899: {
             cashAddress:
-                'bitcoincash:qzagy47mvh6qxkvcn3acjnz73rkhkc6y7cptzgcqy6',
+                'ecash:qzagy47mvh6qxkvcn3acjnz73rkhkc6y7ccxkrr6zd',
             slpAddress:
-                'simpleledger:qzagy47mvh6qxkvcn3acjnz73rkhkc6y7cdsfndq6y',
+                'etoken:qzagy47mvh6qxkvcn3acjnz73rkhkc6y7ckclp4ax6',
             fundingWif: 'Kx4FiBMvKK1iXjFk5QTaAK6E4mDGPjmwDZ2HDKGUZpE4gCXMaPe9',
             fundingAddress:
-                'simpleledger:qzagy47mvh6qxkvcn3acjnz73rkhkc6y7cdsfndq6y',
+                'etoken:qzagy47mvh6qxkvcn3acjnz73rkhkc6y7ckclp4ax6',
             legacyAddress: '1J1Aq5tAAYxZgSDRo8soKM2Rb41z3xrYpm',
             publicKey:
                 '02a06bb380cf180d703f6f80796a13555aefff817d1f6f842f1e5c555b15f0fa70',

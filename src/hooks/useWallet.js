@@ -111,7 +111,7 @@ const useWallet = () => {
                 wallet.Path1899.cashAddress,
             ];
 
-            console.log('wallet', wallet);
+            console.log('wallet', wallet)
 
             const utxosBcash = await getUtxosBcash(cashAddresses);
 
@@ -223,11 +223,9 @@ const useWallet = () => {
 
             // If not in localforage then existingWallet = false, check localstorage
             if (!existingWallet) {
-                console.log(`no existing wallet, checking local storage`);
                 existingWallet = JSON.parse(
                     window.localStorage.getItem('wallet'),
                 );
-                console.log(`existingWallet from localStorage`, existingWallet);
                 // If you find it here, move it to indexedDb
                 if (existingWallet !== null) {
                     wallet = await getWalletDetails(existingWallet);
@@ -257,8 +255,6 @@ const useWallet = () => {
     };
 
     const migrateLegacyWallet = async (wallet) => {
-        console.log(`migrateLegacyWallet`);
-        console.log(`legacyWallet`, wallet);
         const NETWORK = process.env.REACT_APP_NETWORK;
         const mnemonic = wallet.mnemonic;
         const masterHDNode = HDPrivateKey.fromPhrase(mnemonic);

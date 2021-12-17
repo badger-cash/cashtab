@@ -40,55 +40,13 @@ afterEach(() => {
     React.useContext = realUseContext;
 });
 
-test('Wallet without BCH balance', () => {
-    useContextMock.mockReturnValue(walletWithoutBalancesMock);
-    const testBCH = new BCHJS();
-    const component = renderer.create(
-        <ThemeProvider theme={theme}>
-            <Router>
-                <Tokens jestBCH={testBCH} />
-            </Router>
-        </ThemeProvider>,
-    );
-    let tree = component.toJSON();
-    expect(tree).toMatchSnapshot();
-});
-
-test('Wallet with BCH balances', () => {
-    useContextMock.mockReturnValue(walletWithBalancesMock);
-    const testBCH = new BCHJS();
-    const component = renderer.create(
-        <ThemeProvider theme={theme}>
-            <Router>
-                <Tokens jestBCH={testBCH} />
-            </Router>
-        </ThemeProvider>,
-    );
-    let tree = component.toJSON();
-    expect(tree).toMatchSnapshot();
-});
-
-test('Wallet with BCH balances and tokens', () => {
-    useContextMock.mockReturnValue(walletWithBalancesAndTokens);
-    const testBCH = new BCHJS();
-    const component = renderer.create(
-        <ThemeProvider theme={theme}>
-            <Router>
-                <Tokens jestBCH={testBCH} />
-            </Router>
-        </ThemeProvider>,
-    );
-    let tree = component.toJSON();
-    expect(tree).toMatchSnapshot();
-});
-
 test('Wallet with BCH balances and tokens and state field', () => {
     useContextMock.mockReturnValue(walletWithBalancesAndTokensWithCorrectState);
     const testBCH = new BCHJS();
     const component = renderer.create(
         <ThemeProvider theme={theme}>
             <Router>
-                <Tokens jestBCH={testBCH} />
+                <Tokens />
             </Router>
         </ThemeProvider>,
     );
@@ -102,11 +60,10 @@ test('Without wallet defined', () => {
         balances: { totalBalance: 0 },
         loading: false,
     });
-    const testBCH = new BCHJS();
     const component = renderer.create(
         <ThemeProvider theme={theme}>
             <Router>
-                <Tokens jestBCH={testBCH} />
+                <Tokens />
             </Router>
         </ThemeProvider>,
     );

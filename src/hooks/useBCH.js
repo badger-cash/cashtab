@@ -389,7 +389,109 @@ export default function useBCH() {
         return txFee;
     };
 
-    const createToken = async (wallet, feeInSatsPerByte, configObj) => {
+    const buildGenesisOpReturn = (configObj) => {
+        const stringsArray = [
+            'ticker',
+            'name',
+            'documentUrl'
+        ];
+        const pushEmptyOp = new Opcode(
+            opcodes.OP_PUSHDATA1,
+            Buffer.alloc(0)
+        );
+        const genesisOpReturn = new Script()
+                .pushSym('return')
+                .pushData(Buffer.concat([
+                    Buffer.from('SLP', 'ascii'),
+                    Buffer.alloc(1)
+                ]))
+                .pushPush(Buffer.alloc(1, 1))
+                .pushData(Buffer.from('GENESIS', 'ascii'));
+                // Push metadata strings
+                for (let i = 0; i < stringsArray.length; i++) {
+                    const item = configObj[stringsArray[i]];
+                    if (item && typeof item === 'string' && item.length > 0)
+                        genesisOpReturn.pushString(item);
+                    else
+                        genesisOpReturn.push(pushEmptyOp);
+                }
+                // Document Hash
+                if (configObj.documentHash) {
+                    const documentHash = typeof configObj.documentHash === 'string'
+                        ? Buffer.from(configObj.documentHash, 'hex')
+                        : configObj.documentHash;
+                    if (!Buffer.isBuffer(documentHash) || documentHash.length > 32)
+                        throw new Error ('documentHash must be hex string or buffer of 32 bytes or less');
+                    if (documentHash.length === 0)
+                        genesisOpReturn.push(pushEmptyOp);
+                    else
+                        genesisOpReturn.pushPush(documentHash);
+                } else
+                    genesisOpReturn.push(pushEmptyOp);
+                // Decimals
+                const decimalInt = parseInt(configObj.decimals);
+                if (decimalInt > 9 || decimalInt < 0)
+                    throw new Error ('decimal value must be a number between 0 and 9');
+                genesisOpReturn.pushPush(Buffer.alloc(1, decimalInt));
+
+                // Mint baton
+                if (configObj.mintBatonVout) {
+                    const batonInt = parseInt(configObj.mintBatonVout)
+                    if (batonInt != 2)
+                        throw new Error ('mintBaton must equal 2')
+                    genesisOpReturn.pushPush(Buffer.alloc(1, batonInt));
+                } else 
+                    genesisOpReturn.push(pushEmptyOp);
+                // Quantity
+                genesisOpReturn.pushData(U64
+                    .fromString(configObj.initialQty)
+                    .muln(10 ** decimalInt)
+                    .toBE(Buffer)
+                )
+                .compile();
+
+        return genesisOpReturn;
+    };
+
+    const buildMintOpReturn = (tokenId, mintQuantity) => {
+        const mintOpReturn = new Script()
+                .pushSym('return')
+                .pushData(Buffer.concat([
+                    Buffer.from('SLP', 'ascii'),
+                    Buffer.alloc(1)
+                ]))
+                .pushPush(Buffer.alloc(1, 1))
+                .pushData(Buffer.from('MINT', 'ascii'))
+                .pushData(tokenId)
+                .pushPush(Buffer.alloc(1, 2))
+                .pushData(U64.fromString(mintQuantity).toBE(Buffer))
+                .compile();
+        return mintOpReturn
+    };
+
+    const buildSendOpReturn = (tokenId, sendQuantityArray) => {
+        const sendOpReturn = new Script()
+                .pushSym('return')
+                .pushData(Buffer.concat([
+                    Buffer.from('SLP', 'ascii'),
+                    Buffer.alloc(1)
+                ]))
+                .pushPush(Buffer.alloc(1, 1))
+                .pushData(Buffer.from('SEND', 'ascii'))
+                .pushData(Buffer.from(tokenId, 'hex'))
+                for (let i = 0; i < sendQuantityArray.length; i++) {
+                    const sendQuantity = sendQuantityArray[i]
+                    sendOpReturn.pushData(U64.fromString(sendQuantity).toBE(Buffer))
+                }
+        return sendOpReturn.compile();
+    };
+
+    const createToken = async (
+        wallet, 
+        feeInSatsPerByte, 
+        configObj,
+        testOnly = false
+    ) => {
         try {
             // Throw error if wallet does not have utxo set in state
             if (!isValidStoredWallet(wallet)) {
@@ -432,7 +534,9 @@ export default function useBCH() {
             const hex = tx.toRaw().toString('hex');
 
             // Broadcast transaction to the network
-            const broadcast = await broadcastTx(hex);
+            let broadcast = { success: true };
+            if (!testOnly)
+                broadcast = await broadcastTx(hex);
             const txidStr = tx.txid().toString('hex')
 
             if (broadcast.success) {
@@ -440,7 +544,7 @@ export default function useBCH() {
             }
             let link;
             if (process.env.REACT_APP_NETWORK === `mainnet`) {
-                link = `${currency.blockExplorerUrl}/tx/${txidStr}`;
+                link = `${currency.tokenExplorerUrl}/tx/${txidStr}`;
             } else {
                 link = `${currency.blockExplorerUrlTestnet}/tx/${txidStr}`;
             }
@@ -465,116 +569,18 @@ export default function useBCH() {
         }
     };
 
-    const buildGenesisOpReturn = (configObj) => {
-        const stringsArray = [
-            'ticker',
-            'name',
-            'documentUrl'
-        ];
-        console.log('configObj', configObj)
-        const pushEmptyOp = new Opcode(
-            opcodes.OP_PUSHDATA1,
-            Buffer.alloc(0)
-        );
-        const genesisOpReturn = new Script()
-                .pushSym('return')
-                .pushData(Buffer.concat([
-                    Buffer.from('SLP', 'ascii'),
-                    Buffer.alloc(1)
-                ]))
-                .pushPush(Buffer.alloc(1, 1))
-                .pushData(Buffer.from('GENESIS', 'ascii'));
-                // Push metadata strings
-                for (let i = 0; i < stringsArray.length; i++) {
-                    const item = configObj[stringsArray[i]];
-                    console.log('item', item);
-                    if (item && typeof item === 'string' && item.length > 0)
-                        genesisOpReturn.pushString(item);
-                    else
-                        genesisOpReturn.push(pushEmptyOp);
-                }
-                // Document Hash
-                if (configObj.documentHash) {
-                    const documentHash = typeof configObj.documentHash === 'string'
-                        ? Buffer.from(configObj.documentHash, 'hex')
-                        : configObj.documentHash;
-                    if (!Buffer.isBuffer(documentHash) || documentHash.length > 32)
-                        throw new Error ('documentHash must be hex string or buffer of 32 bytes or less');
-                    if (documentHash.length === 0)
-                        genesisOpReturn.push(pushEmptyOp);
-                    else
-                        genesisOpReturn.pushPush(documentHash);
-                } else
-                    genesisOpReturn.push(pushEmptyOp);
-                // Decimals
-                const decimalInt = parseInt(configObj.decimals);
-                if (decimalInt > 9 || decimalInt < 0)
-                    throw new Error ('decimal value must be a number between 0 and 9');
-                genesisOpReturn.pushPush(Buffer.alloc(1, decimalInt));
-
-                // Mint baton
-                if (configObj.mintBatonVout) {
-                    const batonInt = parseInt(configObj.mintBatonVout)
-                    if (batonInt != 2)
-                        throw new Error ('mintBaton must equal 2')
-                    genesisOpReturn.pushPush(Buffer.alloc(1, batonInt));
-                } else 
-                    genesisOpReturn.push(pushEmptyOp);
-                // Quantity
-                genesisOpReturn.pushData(U64
-                    .fromString(configObj.initialQty)
-                    .muln(10 ** decimalInt)
-                    .toBE(Buffer)
-                )
-                .compile();
-
-        return genesisOpReturn
-    };
-
-    const buildMintOpReturn = (tokenId, mintQuantity) => {
-        const mintOpReturn = new Script()
-                .pushSym('return')
-                .pushData(Buffer.concat([
-                    Buffer.from('SLP', 'ascii'),
-                    Buffer.alloc(1)
-                ]))
-                .pushPush(Buffer.alloc(1, 1))
-                .pushData(Buffer.from('MINT', 'ascii'))
-                .pushData(tokenId)
-                .pushPush(Buffer.alloc(1, 2))
-                .pushData(U64.fromString(mintQuantity).toBE(Buffer))
-                .compile();
-        return mintOpReturn
-    };
-
-    const buildSendOpReturn = (tokenId, sendQuantityArray) => {
-        const sendOpReturn = new Script()
-                .pushSym('return')
-                .pushData(Buffer.concat([
-                    Buffer.from('SLP', 'ascii'),
-                    Buffer.alloc(1)
-                ]))
-                .pushPush(Buffer.alloc(1, 1))
-                .pushData(Buffer.from('SEND', 'ascii'))
-                .pushData(Buffer.from(tokenId, 'hex'))
-                for (let i = 0; i < sendQuantityArray.length; i++) {
-                    const sendQuantity = sendQuantityArray[i]
-                    sendOpReturn.pushData(U64.fromString(sendQuantity).toBE(Buffer))
-                }
-        return sendOpReturn.compile();
-    };
-
     const sendToken = async (
         wallet,
-        slpBalancesAndUtxos,
         { tokenId, amount, tokenReceiverAddress },
-        feeInSatsPerByte
+        feeInSatsPerByte,
+        testOnly = false
     ) => {
 
         // Get change address from sending utxos
         // fall back to what is stored in wallet
         const REMAINDER_ADDR = wallet.Path1899.cashAddress;
 
+        const slpBalancesAndUtxos = wallet.state.slpBalancesAndUtxos
         // Handle error of user having no BCH
         if (slpBalancesAndUtxos.nonSlpUtxos.length === 0) {
             throw new Error(
@@ -686,7 +692,9 @@ export default function useBCH() {
         const hex = tx.toRaw().toString('hex');
 
         // Broadcast transaction to the network
-        const broadcast = await broadcastTx(hex);
+        let broadcast = { success: true };
+        if (!testOnly)
+            broadcast = await broadcastTx(hex);
         const txidStr = tx.txid().toString('hex')
 
         if (broadcast.success) {
@@ -695,7 +703,7 @@ export default function useBCH() {
 
         let link;
         if (process.env.REACT_APP_NETWORK === `mainnet`) {
-            link = `${currency.blockExplorerUrl}/tx/${txidStr}`;
+            link = `${currency.tokenExplorerUrl}/tx/${txidStr}`;
         } else {
             link = `${currency.blockExplorerUrlTestnet}/tx/${txidStr}`;
         }
@@ -718,13 +726,13 @@ export default function useBCH() {
 
     const sendXec = async (
         wallet,
-        utxos,
         feeInSatsPerByte,
         optionalOpReturnMsg,
         isOneToMany,
         destinationAddressAndValueArray,
         destinationAddress,
         sendAmount,
+        testOnly = false
     ) => {
         try {
             let value = new BigNumber(0);
@@ -816,7 +824,7 @@ export default function useBCH() {
                 tx.addOutput(script, 0);
             }
             // End of building the OP_RETURN output.
-
+            const utxos = wallet.state.slpBalancesAndUtxos.nonSlpUtxos
             let coins = [];
             for (let i = 0; i < utxos.length; i++) {
                 const utxo = utxos[i];
@@ -868,7 +876,9 @@ export default function useBCH() {
             const hex = tx.toRaw().toString('hex');
 
             // Broadcast transaction to the network
-            const broadcast = await broadcastTx(hex);
+            let broadcast = {success: true};
+            if (!testOnly)
+                broadcast = await broadcastTx(hex);
             const txidStr = tx.txid().toString('hex')
 
             if (broadcast.success) {

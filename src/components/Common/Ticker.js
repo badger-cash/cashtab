@@ -211,7 +211,7 @@ export function toLegacy(address) {
     return legacyAddress;
 }
 
-export function toLegacyArray(addressArray) {
+export function toCleanArray(addressArray) {
     let cleanArray = []; // array of bch converted addresses to be returned
 
     try {

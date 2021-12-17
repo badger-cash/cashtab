@@ -3,7 +3,7 @@ import {
     isValidCashPrefix,
     isValidTokenPrefix,
     toLegacy,
-    toLegacyArray,
+    toCleanArray,
     isCashtabOutput,
     isEtokenOutput,
     extractCashtabMessage,
@@ -126,43 +126,44 @@ test('toLegacy throws error if input address has invalid prefix', async () => {
 });
 
 test('toLegacyArray throws error if the addressArray input is null', async () => {
-    const result = toLegacyArray(null);
+    const result = toCleanArray(null);
 
     expect(result).toStrictEqual(new Error('Invalid addressArray input'));
 });
 
 test('toLegacyArray throws error if the addressArray input is empty', async () => {
-    const result = toLegacyArray([]);
+    const result = toCleanArray([]);
 
     expect(result).toStrictEqual(new Error('Invalid addressArray input'));
 });
 
 test('toLegacyArray throws error if the addressArray input is a number', async () => {
-    const result = toLegacyArray(12345);
+    const result = toCleanArray(12345);
 
     expect(result).toStrictEqual(new Error('Invalid addressArray input'));
 });
 
 test('toLegacyArray throws error if the addressArray input is undefined', async () => {
-    const result = toLegacyArray(undefined);
+    const result = toCleanArray(undefined);
 
     expect(result).toStrictEqual(new Error('Invalid addressArray input'));
 });
 
+// Input in application are now addresses with ecash: prefixes
 test('toLegacyArray successfully converts a standard sized valid addressArray input', async () => {
-    const result = toLegacyArray(validAddressArrayInput);
+    const result = toCleanArray(validAddressArrayInput);
 
     expect(result).toStrictEqual(validAddressArrayOutput);
 });
 
 test('toLegacyArray successfully converts a large valid addressArray input', async () => {
-    const result = toLegacyArray(validLargeAddressArrayInput);
+    const result = toCleanArray(validLargeAddressArrayInput);
 
     expect(result).toStrictEqual(validLargeAddressArrayOutput);
 });
 
-test('toLegacyArray throws an error on an addressArray with invalid addresses', async () => {
-    const result = toLegacyArray(invalidAddressArrayInput);
+test('toCleanArray throws an error on an addressArray with invalid addresses', async () => {
+    const result = toCleanArray(invalidAddressArrayInput);
 
     expect(result).toStrictEqual(
         new ValidationError(

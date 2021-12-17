@@ -118,7 +118,6 @@ Tokens.defaultProps = {
 };
 
 Tokens.propTypes = {
-    jestBCH: PropTypes.object,
     passLoadingStatus: PropTypes.func,
 };
 
