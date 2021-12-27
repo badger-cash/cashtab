@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { 
+    useLocation ,
+    useHistory
+} from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { WalletContext } from '@utils/context';
 import {
@@ -65,6 +68,7 @@ import { PlusSquareOutlined } from '@ant-design/icons';
 import styled from 'styled-components';
 import { convertToEcashPrefix } from '@utils/cashMethods';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
+import { getUrlFromQueryString } from '@utils/bip70';
 
 const StyledSpacer = styled.div`
     height: 1px;
@@ -126,6 +130,11 @@ const SendBCH = ({ passLoadingStatus }) => {
     // Show a confirmation modal on transactions created by populating form from web page button
     const [isModalVisible, setIsModalVisible] = useState(false);
 
+    const prefixesArray = [
+        ...currency.prefixes,
+        ...currency.tokenPrefixes
+    ]
+
     const [messageSignature, setMessageSignature] = useState('');
     const [sigCopySuccess, setSigCopySuccess] = useState('');
 
@@ -141,6 +150,8 @@ const SendBCH = ({ passLoadingStatus }) => {
     const handleCancel = () => {
         setIsModalVisible(false);
     };
+
+    const history = useHistory();
 
     const { getBcashRestUrl, sendXec, calcFee, signPkMessage } = useBCH();
 
@@ -170,22 +181,39 @@ const SendBCH = ({ passLoadingStatus }) => {
             return;
         }
 
-        const txInfoArr = window.location.hash.split('?')[1].split('&');
+        const delimiterIndex = window.location.hash.indexOf('?');
+        const txInfoArr = window.location.hash
+            .slice(delimiterIndex+1)
+            .split('&');
 
         // Iterate over this to create object
         const txInfo = {};
         for (let i = 0; i < txInfoArr.length; i += 1) {
-            let txInfoKeyValue = txInfoArr[i].split('=');
-            let key = txInfoKeyValue[0];
-            let value = txInfoKeyValue[1];
+            const delimiterIndex = txInfoArr[i].indexOf('=');
+            const key = txInfoArr[i].slice(0, delimiterIndex);
+            const value = txInfoArr[i].slice(delimiterIndex+1);
             txInfo[key] = value;
+            // Handle possible BIP70
+            if (key === 'uri') {
+                const prefix = value.split(':')[0];
+                if (prefixesArray.includes(prefix)) {
+                    const queryString = txInfoArr[i].split('?')[1];
+                    const url = getUrlFromQueryString(queryString);
+                    if (url) {
+                        const uri = `${prefix}:?${queryString}`
+                        return history.push(
+                            `/sendBip70?uri=${encodeURI(uri)}`
+                        );
+                    }
+                }
+            }
         }
         console.log(`txInfo from page params`, txInfo);
         setTxInfoFromUrl(txInfo);
         populateFormsFromUrl(txInfo);
     }, []);
 
-    function populateFormsFromUrl(txInfo) {
+    async function populateFormsFromUrl(txInfo) {
         if (txInfo && txInfo.address && txInfo.value) {
             setFormData({
                 address: txInfo.address,
@@ -363,7 +391,18 @@ const SendBCH = ({ passLoadingStatus }) => {
         const { address, isValid, queryString, amount } = addressInfo;
 
         // If query string,
+        // handle Bip70 or
         // Show an alert that only amount and currency.ticker are supported
+        const prUrl = getUrlFromQueryString(queryString);
+        let prefix = currency.prefixes[0];
+        if (isValidTokenPrefix(address))
+            prefix = currency.tokenPrefixes[0];
+        const uri = `${prefix}:?${queryString}`
+        if (prUrl) {
+            return history.push(
+                `/sendBip70?uri=${encodeURI(uri)}`
+            );
+        }
         setQueryStringText(queryString);
 
         // Is this valid address?

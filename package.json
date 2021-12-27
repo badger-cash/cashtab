@@ -8,6 +8,7 @@
         "@fortawesome/fontawesome-free": "^5.15.1",
         "@zxing/library": "0.8.0",
         "antd": "^4.9.3",
+        "b70": "https://github.com/badger-cash/b70.git#v0.8.1",
         "bcash": "https://github.com/badger-cash/bcash.git#webpack-ecash",
         "bignumber.js": "^9.0.0",
         "dotenv": "^8.2.0",

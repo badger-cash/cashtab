@@ -175,6 +175,7 @@ const TxWrapper = styled.div`
 const Tx = ({ data, fiatPrice, fiatCurrency }) => {
     const txDate =
         typeof data.blocktime === 'undefined'
+        || data.blocktime === 0
             ? new Date().toLocaleDateString()
             : new Date(data.blocktime * 1000).toLocaleDateString();
     // if data only includes height and txid, then the tx could not be parsed by cashtab

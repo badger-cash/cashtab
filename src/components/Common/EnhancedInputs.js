@@ -216,6 +216,92 @@ SendBchInput.propTypes = {
     activeFiatCode: PropTypes.string,
 };
 
+export const SendBip70Input = ({
+    inputProps,
+    selectProps,
+    activeTokenCode,
+    ...otherProps
+}) => {
+    const { Option } = Select;
+    const currencies = [
+        {
+            value: activeTokenCode,
+            label: activeTokenCode,
+        }
+    ];
+    const currencyOptions = currencies.map(currency => {
+        return (
+            <Option
+                key={currency.value}
+                value={currency.value}
+                className="selectedCurrencyOption"
+            >
+                {currency.label}
+            </Option>
+        );
+    });
+
+    const CurrencySelect = (
+        <Select
+            value={activeTokenCode}
+            readOnly={true}
+            className="select-after"
+            style={{ width: '30%' }}
+            {...selectProps}
+        >
+            {currencyOptions}
+        </Select>
+    );
+
+    const prefixImage = inputProps.token ? (
+        <div
+            style={{
+                height: '16px',
+                width: '16px'
+            }}
+        ></div>
+    ) : (
+        <img
+            src={currency.logo}
+            alt=""
+            width={16}
+            height={16}
+        />
+    );
+
+    return (
+        <AntdFormWrapper>
+            <Form.Item {...otherProps}>
+                <Input.Group compact>
+                    <Input
+                        readOnly={true}
+                        style={{ width: '60%', textAlign: 'left' }}
+                        type="number"
+                        step={
+                            inputProps.dollar === 1
+                                ? 0.01
+                                : 1 / 10 ** currency.cashDecimals
+                        }
+                        prefix={
+                            inputProps.dollar === 1 ? (
+                                <ThemedDollarOutlined />
+                            ) : prefixImage
+                        }
+                        {...inputProps}
+                    />
+                    {CurrencySelect}
+                </Input.Group>
+            </Form.Item>
+        </AntdFormWrapper>
+    );
+};
+
+SendBip70Input.propTypes = {
+    inputProps: PropTypes.object,
+    selectProps: PropTypes.object,
+    activeTokenCode: PropTypes.string,
+};
+
 export const FormItemWithMaxAddon = ({ onMax, inputProps, ...otherProps }) => {
     return (
         <AntdFormWrapper>
@@ -297,6 +383,30 @@ export const DestinationAddressMulti = ({ inputProps, ...otherProps }) => {
 };
 
 DestinationAddressMulti.propTypes = {
+    inputProps: PropTypes.object,
+};
+
+export const Bip70AddressSingle = ({
+    inputProps,
+    ...otherProps
+}) => {
+    return (
+        <AntdFormWrapper>
+            <Form.Item {...otherProps}>
+                <Input
+                    prefix={<ThemedWalletOutlined />}
+                    autoComplete="off"
+                    readOnly={true}
+                    {...inputProps}
+                />
+            </Form.Item>
+        </AntdFormWrapper>
+    );
+};
+
+Bip70AddressSingle.propTypes = {
+    onScan: PropTypes.func,
+    loadWithCameraOpen: PropTypes.bool,
     inputProps: PropTypes.object,
 };
 

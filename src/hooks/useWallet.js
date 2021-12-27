@@ -111,8 +111,6 @@ const useWallet = () => {
                 wallet.Path1899.cashAddress,
             ];
 
-            console.log('wallet', wallet)
-
             const utxosBcash = await getUtxosBcash(cashAddresses);
 
             const utxosHaveChanged = !isEqual(utxosBcash, wallet?.state?.utxos);

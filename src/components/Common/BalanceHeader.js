@@ -13,7 +13,11 @@ const BalanceHeader = ({ balance, ticker }) => {
 
 // balance may be a number (XEC balance) or a BigNumber object (token balance)
 BalanceHeader.propTypes = {
-    balance: PropTypes.oneOfType([PropTypes.number, PropTypes.object]),
+    balance: PropTypes.oneOfType([
+        PropTypes.number, 
+        PropTypes.object, 
+        PropTypes.string
+    ]),
     ticker: PropTypes.string,
 };
 

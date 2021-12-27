@@ -15,6 +15,7 @@ import Wallet from '@components/Wallet/Wallet';
 import Tokens from '@components/Tokens/Tokens';
 import Send from '@components/Send/Send';
 import SendToken from '@components/Send/SendToken';
+import SendBip70 from '@components/Send/SendBip70';
 import Configure from '@components/Configure/Configure';
 import NotFound from '@components/NotFound';
 import CashTab from '@assets/cashtab_xec.png';
@@ -342,6 +343,13 @@ const App = () => {
                                             />
                                         )}
                                     />
+                                    <Route path="/sendBip70">
+                                        <SendBip70
+                                            passLoadingStatus={
+                                                setLoadingUtxosAfterSend
+                                            }
+                                        />
+                                    </Route>
                                     <Route path="/configure">
                                         <Configure />
                                     </Route>

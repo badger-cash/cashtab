@@ -11,10 +11,12 @@ import {
     isValidStoredWallet,
     convertToEcashPrefix,
 } from '@utils/cashMethods';
+import { postPayment } from '@utils/bip70';
 import cashaddr from 'ecashaddrjs';
 import { U64 } from 'n64';
 import { 
     Input,
+    Output,
     Coin, 
     MTX,
     KeyRing,
@@ -24,7 +26,10 @@ import {
     script
 } from 'bcash';
 
-const { common: { opcodes }} = script;
+const { 
+    SLP,
+    common: { opcodes }
+} = script;
 
 export default function useBCH() {
     const SEND_BCH_ERRORS = {
@@ -911,6 +916,176 @@ export default function useBCH() {
         }
     };
 
+    const sendBip70 = async (
+        wallet,
+        paymentDetails, // b70.PaymentDetails
+        feeInSatsPerByte,
+        testOnly = false
+    ) => {
+        // Get change address from sending utxos
+        // fall back to what is stored in wallet
+        const REMAINDER_ADDR = wallet.Path1899.cashAddress;
+        const refundOutput = new Output({
+            address: REMAINDER_ADDR
+        })
+
+        const slpBalancesAndUtxos = wallet.state.slpBalancesAndUtxos;
+        const nonSlpCoins = slpBalancesAndUtxos.nonSlpUtxos.map( utxo => 
+            Coin.fromJSON(utxo)
+        );
+
+        // Check to see if this is an SLP/eToken transaction
+        const firstOutput = paymentDetails.outputs[0]
+        const slpScript = SLP.fromRaw(Buffer.from(firstOutput.script));
+        const isSlp = slpScript.isValidSlp();
+        const tokenCoins = [];
+        // If is Slp, 
+        if (isSlp) {
+            // Handle error of user having no BCH
+            if (slpBalancesAndUtxos.nonSlpUtxos.length === 0) {
+                throw new Error(
+                    `You need some ${currency.ticker} to send ${currency.tokenTicker}`,
+                );
+            }
+
+            // Throw error if transaction type is not SEND
+            const slpType = slpScript.getType();
+            if (slpType !== 'SEND')
+                throw new Error(`Token ${slpType} transactions not supported`);
+
+            // Get required UTXOs
+            const tokenIdBuf = slpScript.getData(4);
+            const tokenId = tokenIdBuf.toString('hex');
+            const sendRecords = slpScript.getRecords(tokenIdBuf);
+            const totalBase = sendRecords.reduce((total, record) => {
+                return total.add(U64.fromBE(Buffer.from(record.value)));
+            }, U64.fromInt(0));
+            let totalTokenBalance = U64.fromInt(0);
+            const token = wallet.state.tokens.find(token => 
+                token.tokenId === tokenId
+            );
+            if (token) {
+                totalTokenBalance = U64.fromString(
+                    token.balance.toString()
+                );
+            }
+            if (totalTokenBalance.lt(totalBase))
+                throw new Error ('Insufficient token balance to complete transaction');
+
+            const tokenUtxos = slpBalancesAndUtxos.slpUtxos.filter(
+                utxo => {
+                    if (
+                        utxo && // UTXO is associated with a token.
+                        utxo.slp.tokenId === tokenId && // UTXO matches the token ID.
+                        utxo.slp.type !== 'BATON' // UTXO is not a minting baton.
+                    ) {
+                        return true;
+                    }
+                    return false;
+                },
+            );
+
+            if (tokenUtxos.length === 0) {
+                throw new Error(
+                    'No token UTXOs for the specified token could be found.',
+                );
+            }
+
+            let finalTokenAmountSent = U64.fromInt(0);
+            for (let i = 0; i < tokenUtxos.length; i++) {
+                const tokenCoin = Coin.fromJSON(tokenUtxos[i]);
+                tokenCoins.push(tokenCoin);
+
+                finalTokenAmountSent = finalTokenAmountSent.add(
+                    U64.fromString(tokenUtxos[i].slp.value),
+                );
+
+                if (totalBase.lte(finalTokenAmountSent)) {
+                    // Add token change amount to SLP OP_RETURN
+                    const tokenChangeAmount = finalTokenAmountSent.sub(totalBase);
+                    slpScript.pushData(tokenChangeAmount.toBE(Buffer)).compile();
+                    // add additional output for change
+                    paymentDetails.outputs[0].script = slpScript.toRaw()
+                    paymentDetails.outputs.splice(
+                        sendRecords.length + 1, // Must skip OP_RETURN
+                        0,
+                        {
+                            script: refundOutput.script.toRaw(),
+                            value: 546
+                        }
+                    );
+                    break;
+                }
+            }
+        }
+
+        // Build Transaction
+        const tx = new MTX();
+
+        // Add required outputs
+        for (let i = 0; i < paymentDetails.outputs.length; i++) {
+            tx.addOutput(paymentDetails.outputs[i])
+        }
+
+        await tx.fund([
+                ...tokenCoins,
+                ...nonSlpCoins
+            ], {
+            inputs: tokenCoins.map(coin => Input.fromCoin(coin).prevout),
+            changeAddress: REMAINDER_ADDR,
+            rate: feeInSatsPerByte * 1000 // 1000 sats per kb = 1 sat/b
+        });
+
+        const keyRingArray = [
+            KeyRing.fromSecret(wallet.Path245.fundingWif),
+            KeyRing.fromSecret(wallet.Path145.fundingWif),
+            KeyRing.fromSecret(wallet.Path1899.fundingWif)
+        ];
+
+        tx.sign(keyRingArray);
+
+        // output rawhex
+        const rawTx = tx.toRaw()
+        const hex = rawTx.toString('hex');
+        console.log('hex', hex);
+
+        const paymentObj = {
+            merchantData: Buffer.alloc(0),
+            transactions: [rawTx],
+            refundTo:[{
+                script: refundOutput.script.toRaw(),
+                value: 0
+            }],
+            memo: paymentDetails.memo
+        } 
+
+        // Broadcast transaction to the network
+        let paymentAck;
+        if (!testOnly) {
+            paymentAck = await postPayment(
+                paymentDetails.paymentUrl,
+                paymentObj,
+                isSlp ? currency.tokenPrefixes[0] : currency.prefixes[0]
+            );
+        }
+        const txidStr = tx.txid().toString('hex');
+
+        if (paymentAck.payment) {
+            console.log(`${currency.tokenTicker} txid`, txidStr);
+        }
+
+        let link;
+        if (process.env.REACT_APP_NETWORK === `mainnet`) {
+            link = `${currency.tokenExplorerUrl}/tx/${txidStr}`;
+        } else {
+            link = `${currency.blockExplorerUrlTestnet}/tx/${txidStr}`;
+        }
+
+        //console.log(`link`, link);
+
+        return link;
+    };
+
     return {
         calcFee,
         getUtxosBcash,
@@ -922,6 +1097,7 @@ export default function useBCH() {
         signPkMessage,
         sendXec,
         sendToken,
+        sendBip70,
         createToken,
     };
 }
