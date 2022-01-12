@@ -176,10 +176,17 @@ const SendBip70 = ({ passLoadingStatus }) => {
         }
         console.log(`prInfo from page params`, prInfo);
         if (prInfo.url && prInfo.type) {
-            prInfo.paymentDetails = (await getPaymentRequest(
-                prInfo.url, 
-                prInfo.type
-            )).paymentDetails;
+            try {
+                prInfo.paymentDetails = (await getPaymentRequest(
+                    prInfo.url, 
+                    prInfo.type
+                )).paymentDetails;
+            } catch (err) {
+                return errorNotification(err, 
+                    'Failed to fetch invoice. May be expired or invalid', 
+                    `Fetching invoice: ${prInfo.url}`
+                );
+            }
         }
         setPrInfoFromUrl(prInfo);
         prInfo.paymentDetails.type = prInfo.type;
@@ -527,7 +534,8 @@ const SendBip70 = ({ passLoadingStatus }) => {
                             {!checkSufficientFunds() ||
                             apiError ||
                             sendBchAmountError ||
-                            sendBchAddressError ? (
+                            sendBchAddressError ||
+                            !prInfoFromUrl ? (
                                 <SecondaryButton>Send</SecondaryButton>
                             ) : (
                                 <PrimaryButton
