@@ -425,7 +425,7 @@ export default function useBCH() {
                     const documentHash = typeof configObj.documentHash === 'string'
                         ? Buffer.from(configObj.documentHash, 'hex')
                         : configObj.documentHash;
-                    if (!Buffer.isBuffer(documentHash) || documentHash.length > 32)
+                    if (!Buffer.isBuffer(documentHash) || (documentHash.length != 0 && documentHash.length != 32))
                         throw new Error ('documentHash must be hex string or buffer of 32 bytes or less');
                     if (documentHash.length === 0)
                         genesisOpReturn.push(pushEmptyOp);
