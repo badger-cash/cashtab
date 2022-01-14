@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect }  from 'react';
+import { useHistory } from 'react-router-dom';
 import styled from 'styled-components';
 import { WalletContext } from '@utils/context';
 import OnBoarding from '@components/OnBoarding/OnBoarding';
@@ -12,6 +13,7 @@ import BalanceHeader from '@components/Common/BalanceHeader';
 import BalanceHeaderFiat from '@components/Common/BalanceHeaderFiat';
 import { LoadingCtn, ZeroBalanceHeader } from '@components/Common/Atoms';
 import { getWalletState } from '@utils/cashMethods';
+import { getUrlFromQueryString } from '@utils/bip70';
 
 export const Tabs = styled.div`
     margin: auto;
@@ -180,6 +182,46 @@ const WalletInfo = () => {
         setAddress(address === 'cashAddress' ? 'slpAddress' : 'cashAddress');
         setActiveTab(address === 'cashAddress' ? 'tokens' : 'txHistory');
     };
+
+    const prefixesArray = [
+        ...currency.prefixes,
+        ...currency.tokenPrefixes
+    ];
+
+    const { push } = useHistory();
+
+    useEffect(() => {
+        // Forward to SendBip70.js when loaded with a query string
+        if (
+            !window.location ||
+            !window.location.hash ||
+            (window.location.search == '' && window.location.hash === '#/sendBip70')
+        ) {
+            return;
+        }
+
+        const fullQueryString = window.location.search == '' ? 
+            window.location.hash : window.location.search;
+        const delimiterIndex = fullQueryString.indexOf('?');
+        const urlParams = fullQueryString.slice(delimiterIndex+1);
+        const txInfoArr = urlParams.split('&');
+
+        // Iterate over this to create object
+        for (let i = 0; i < txInfoArr.length; i += 1) {
+            const delimiterIndex = txInfoArr[i].indexOf('=');
+            const param = txInfoArr[i].slice(0, delimiterIndex);
+            const encodedValue = txInfoArr[i].slice(delimiterIndex+1);
+            const value = decodeURIComponent(encodedValue);
+            const prefix = value.split(':')[0];
+            if (param === 'uri' && prefixesArray.includes(prefix)) {
+                const queryString = value.split('?')[1];
+                const url = getUrlFromQueryString(queryString);
+                if (url) {
+                    push('/sendBip70');
+                }
+            }
+        }
+    }, [push]);
 
     return (
         <>

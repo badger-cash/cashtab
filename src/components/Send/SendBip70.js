@@ -148,13 +148,17 @@ const SendBip70 = ({ passLoadingStatus }) => {
         if (
             !window.location ||
             !window.location.hash ||
-            window.location.hash === '#/sendBip70'
+            (window.location.search == '' && window.location.hash === '#/sendBip70')
         ) {
+            passLoadingStatus(false);
             return;
         }
 
-        const delimiterIndex = window.location.hash.indexOf('?');
-        const txInfoArr = window.location.hash
+        const fullQueryString = window.location.search == '' ? 
+            window.location.hash : window.location.search;
+
+        const delimiterIndex = fullQueryString.indexOf('?');
+        const txInfoArr = fullQueryString
             .slice(delimiterIndex+1)
             .split('&');
 
@@ -163,10 +167,11 @@ const SendBip70 = ({ passLoadingStatus }) => {
         for (let i = 0; i < txInfoArr.length; i += 1) {
             const delimiterIndex = txInfoArr[i].indexOf('=');
             const param = txInfoArr[i].slice(0, delimiterIndex);
-            const value = txInfoArr[i].slice(delimiterIndex+1);
+            const encodedValue = txInfoArr[i].slice(delimiterIndex+1);
+            const value = decodeURIComponent(encodedValue);
             const prefix = value.split(':')[0];
             if (param === 'uri' && prefixesArray.includes(prefix)) {
-                const queryString = txInfoArr[i].split('?')[1];
+                const queryString = value.split('?')[1];
                 const url = getUrlFromQueryString(queryString);
                 if (url) {
                     prInfo.type = prefix.toLowerCase();
@@ -312,6 +317,7 @@ const SendBip70 = ({ passLoadingStatus }) => {
             await sleep(3000);
             // Manually disable loading
             passLoadingStatus(false);
+            window.history.replaceState(null, '', window.location.origin);
             return history.push(`/wallet`);
         } catch (e) {
             const ticker = type == 'etoken' ?
