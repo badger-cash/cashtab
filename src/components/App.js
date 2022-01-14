@@ -242,7 +242,7 @@ const App = () => {
     const hasTab = validWallet
         ? checkForTokenById(
               wallet.state.tokens,
-              '50d8292c6255cda7afc6c8566fed3cf42a2794e9619740fe8f4c95431271410e',
+              '744354f928fa48de87182c4024e2c4acbd3c34f42ce9d679f541213688e584b1', // BUX
           )
         : false;
 

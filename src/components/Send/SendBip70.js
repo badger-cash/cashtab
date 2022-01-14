@@ -75,6 +75,9 @@ const SendBip70 = ({ passLoadingStatus }) => {
         balances
     } = walletState;
     // Modal settings
+    const purchaseTokenIds = [
+        '744354f928fa48de87182c4024e2c4acbd3c34f42ce9d679f541213688e584b1'
+    ];
 
     const blankFormData = {
         dirty: true,
@@ -108,6 +111,10 @@ const SendBip70 = ({ passLoadingStatus }) => {
     // Show a confirmation modal on transactions created by populating form from web page button
     const [isModalVisible, setIsModalVisible] = useState(false);
 
+    // Show a purchase modal when BUX is requested and insufficient balance
+    const [isPurchaseModalVisible, setIsPurchaseModalVisible] = useState(false);
+    const [purchaseTokenAmount, setPurchaseTokenAmount] = useState(0);
+
     const prefixesArray = [
         ...currency.prefixes,
         ...currency.tokenPrefixes
@@ -126,6 +133,19 @@ const SendBip70 = ({ passLoadingStatus }) => {
         setIsModalVisible(false);
     };
 
+    const handlePurchaseOk = () => {
+        setIsPurchaseModalVisible(false);
+        return window.location.assign(
+            `https://bux.digital/?cbxamount=${purchaseTokenAmount.toString()}`
+            + `&cbxaddress=${wallet.Path1899.slpAddress}`
+            +`#payment`
+        )
+    };
+
+    const handlePurchaseCancel = () => {
+        setIsPurchaseModalVisible(false);
+    };
+
     const sleep = (ms) => {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
@@ -140,7 +160,22 @@ const SendBip70 = ({ passLoadingStatus }) => {
         passLoadingStatus(false);
     }, [balances.totalBalance]);
 
+    useEffect(() => {
+        // Check to see if purchase modal should be shown
+        if (formData.token) {
+            const difference = Number(tokenFormattedBalance) - Number(formData.value);
+            if (purchaseTokenIds.includes(formData.token?.tokenId)) {
+                // Set purchase modal visible and set amount to purchase
+                setIsPurchaseModalVisible(difference < 0);
+                const purchaseAmount = difference < 0 ? Math.abs(difference) : 0
+                setPurchaseTokenAmount(purchaseAmount);
+            }
+        }
+    }, [tokenFormattedBalance]);
+
     useEffect(async () => {
+        if (!wallet.Path1899)
+            return history.push('/wallet');
         passLoadingStatus(true);
         // Manually parse for prInfo object on page load when SendBip70.js is loaded with a query string
 
@@ -418,6 +453,18 @@ const SendBip70 = ({ passLoadingStatus }) => {
                 <p>
                     Are you sure you want to send {formData.value}{' '}
                     {displayTicker} to settle this payment request?
+                </p>
+            </Modal>
+            <Modal
+                title={`Purchase ${displayTicker}`}
+                visible={isPurchaseModalVisible}
+                onOk={handlePurchaseOk}
+                onCancel={handlePurchaseCancel}
+            >
+                <p>
+                    You have insufficient funds. Do you want to purchase {' '}
+                    <strong>{purchaseTokenAmount}{' '}{displayTicker}{' '}</strong>
+                    in order to be able to settle this payment request?
                 </p>
             </Modal>
             {!checkSufficientFunds() ? (
