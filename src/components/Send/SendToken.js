@@ -34,11 +34,11 @@ import {
 const SendToken = ({ tokenId, passLoadingStatus }) => {
     const { wallet, apiError } = React.useContext(WalletContext);
     const walletState = getWalletState(wallet);
-    const { tokens, slpBalancesAndUtxos } = walletState;
+    const { tokens } = walletState;
     const token = tokens.find(token => token.tokenId === tokenId);
-    const tokenFormattedBalance = new BigNumber(token.balance)
+    const tokenFormattedBalance = token ? new BigNumber(token.balance)
         .div(10 ** token.info.decimals)
-        .toString();
+        .toString() : '0';
 
     const [tokenStats, setTokenStats] = useState(null);
     const [queryStringText, setQueryStringText] = useState(null);
@@ -88,7 +88,7 @@ const SendToken = ({ tokenId, passLoadingStatus }) => {
         // cleanAddress = convertEtokenToSimpleledger(cleanAddress);
 
         try {
-            const link = await sendToken(wallet, slpBalancesAndUtxos, {
+            const link = await sendToken(wallet, {
                 tokenId: tokenId,
                 tokenReceiverAddress: cleanAddress,
                 amount: value,

@@ -832,16 +832,18 @@ const useWallet = () => {
             const receivedTokenObjectIndex = tokens.findIndex(
                 x => x.tokenId === newTokenId,
             );
-            //console.log(`receivedTokenObjectIndex`, receivedTokenObjectIndex);
+            // console.log(`receivedTokenObjectIndex`, receivedTokenObjectIndex);
             // Calculate amount received
-            //console.log(`receivedTokenObject:`, tokens[receivedTokenObjectIndex]);
+            // console.log(`receivedTokenObject:`, tokens[receivedTokenObjectIndex]);
 
             const receivedSlpQty =
-                tokens[receivedTokenObjectIndex].balance.toString();
+                tokens[receivedTokenObjectIndex].balance
+                .div(tokens[receivedTokenObjectIndex].info.decimals ** 10)
+                .toString();
             const receivedSlpTicker =
-                tokens[receivedTokenObjectIndex].info.tokenTicker;
+                tokens[receivedTokenObjectIndex].info.ticker;
             const receivedSlpName =
-                tokens[receivedTokenObjectIndex].info.tokenName;
+                tokens[receivedTokenObjectIndex].info.name;
             //console.log(`receivedSlpQty`, receivedSlpQty);
 
             // Notification if you received SLP
@@ -871,12 +873,13 @@ const useWallet = () => {
                         // Also don't 'continue' ; this means you have sent a token, just stop iterating through
                         break;
                     }
+                    console.log('tokens[i]', tokens[i]);
                     const receivedSlpQty = tokens[i].balance.minus(
                         previousTokens[i].balance,
-                    );
+                    ).div(10 ** tokens[i].info.decimals);
 
-                    const receivedSlpTicker = tokens[i].info.tokenTicker;
-                    const receivedSlpName = tokens[i].info.tokenName;
+                    const receivedSlpTicker = tokens[i].info.ticker;
+                    const receivedSlpName = tokens[i].info.name;
 
                     eTokenReceivedNotification(
                         currency,
