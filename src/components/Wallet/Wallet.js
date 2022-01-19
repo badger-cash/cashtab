@@ -202,14 +202,24 @@ const WalletInfo = () => {
 
         const fullQueryString = window.location.search == '' ? 
             window.location.hash : window.location.search;
+
         const delimiterIndex = fullQueryString.indexOf('?');
-        const urlParams = fullQueryString.slice(delimiterIndex+1);
-        const txInfoArr = urlParams.split('&');
+        const txInfoArr = fullQueryString
+            .slice(delimiterIndex+1)
+            .split('&');
 
         // Iterate over this to create object
         for (let i = 0; i < txInfoArr.length; i += 1) {
             const delimiterIndex = txInfoArr[i].indexOf('=');
-            const param = txInfoArr[i].slice(0, delimiterIndex);
+            const param = txInfoArr[i]
+                .slice(0, delimiterIndex)
+                .toLowerCase();
+            // Forward to selfMint if auth code is specified
+            if (param == 'mintauth') {
+                console.log('has mintauth')
+                return push('/selfMint');
+            }
+
             const encodedValue = txInfoArr[i].slice(delimiterIndex+1);
             const value = decodeURIComponent(encodedValue);
             const prefix = value.split(':')[0];

@@ -37,6 +37,7 @@ import { checkForTokenById } from '@utils/tokenMethods.js';
 import { currency } from './Common/Ticker';
 // Biometric security import not used in extension/src/components/App.js
 import ProtectableComponentWrapper from './Authentication/ProtectableComponentWrapper';
+import SelfMint from './Send/SelfMint';
 
 const GlobalStyle = createGlobalStyle`    
     .ant-modal-wrap > div > div.ant-modal-content > div > div > div.ant-modal-confirm-btns > button, .ant-modal > button, .ant-modal-confirm-btns > button, .ant-modal-footer > button, #cropControlsConfirm {
@@ -242,7 +243,7 @@ const App = () => {
     const hasTab = validWallet
         ? checkForTokenById(
               wallet.state.tokens,
-              '744354f928fa48de87182c4024e2c4acbd3c34f42ce9d679f541213688e584b1', // BUX
+              '50d8292c6255cda7afc6c8566fed3cf42a2794e9619740fe8f4c95431271410e',
           )
         : false;
 
@@ -345,6 +346,13 @@ const App = () => {
                                     />
                                     <Route path="/sendBip70">
                                         <SendBip70
+                                            passLoadingStatus={
+                                                setLoadingUtxosAfterSend
+                                            }
+                                        />
+                                    </Route>
+                                    <Route path="/selfMint">
+                                        <SelfMint
                                             passLoadingStatus={
                                                 setLoadingUtxosAfterSend
                                             }

@@ -20,9 +20,6 @@ export const getUrlFromQueryString = (queryString) => {
     if (typeof queryString !== 'string')
         return null;
 
-    // queryString = decodeURIComponent(queryString);
-    console.log('queryString', queryString);
-
     const [ queryParameter, queryData ] = queryString.split('=');
     if ( queryParameter === 'r') {
         // Check for BIP70

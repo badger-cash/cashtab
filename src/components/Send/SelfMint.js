@@ -47,8 +47,7 @@ import ApiError from '@components/Common/ApiError';
 import { formatFiatBalance } from '@utils/validation';
 import styled from 'styled-components';
 import cashaddr from 'ecashaddrjs';
-import { getUrlFromQueryString } from '@utils/bip70';
-import { getPaymentRequest } from '../../utils/bip70';
+import { authPubKeys } from '@utils/selfMint';
 import { 
     Script,
     script
@@ -60,7 +59,7 @@ const MemoLabel = styled.div`
     color: purple;
 `;
 
-const SendBip70 = ({ passLoadingStatus }) => {
+const SelfMint = ({ passLoadingStatus }) => {
     // use balance parameters from wallet.state object and not legacy balances parameter from walletState, if user has migrated wallet
     // this handles edge case of user with old wallet who has not opened latest Cashtab version yet
 
@@ -93,13 +92,14 @@ const SendBip70 = ({ passLoadingStatus }) => {
         );
         if (token) {
             const tokenBalance = token.balance.toString();
-            tokenFormattedBalance = (tokenBalance / (10 ** token.info.decimals))
+            tokenFormattedBalance = U64.fromString(tokenBalance)
+                .divn(10 ** token.info.decimals)
                 .toString();
         } else {
             tokenFormattedBalance = '0';
         }
     }
-    const [queryStringText, setQueryStringText] = useState(null);
+    const [authCodeB64, setAuthCodeB64] = useState(null);
     const [sendBchAddressError, setSendBchAddressError] = useState(false);
     const [sendBchAmountError, setSendBchAmountError] = useState(false);
     const [selectedCurrency, setSelectedCurrency] = useState(currency.ticker);
@@ -157,27 +157,13 @@ const SendBip70 = ({ passLoadingStatus }) => {
 
     const history = useHistory();
 
-    const { getBcashRestUrl, sendBip70 } = useBCH();
+    const { getBcashRestUrl, sendSelfMint } = useBCH();
 
     // If the balance has changed, unlock the UI
     // This is redundant, if backend has refreshed in 1.75s timeout below, UI will already be unlocked
     useEffect(() => {
         passLoadingStatus(false);
     }, [balances.totalBalance]);
-
-    useEffect(() => {
-        // Check to see if purchase modal should be shown
-        if (formData.token) {
-            const difference = (Number(tokenFormattedBalance) - Number(formData.value))
-                .toFixed(formData.token.decimals);
-            if (purchaseTokenIds.includes(formData.token?.tokenId)) {
-                // Set purchase modal visible and set amount to purchase
-                setIsPurchaseModalVisible(difference < 0);
-                const purchaseAmount = difference < 0 ? Math.abs(difference) : 0
-                setPurchaseTokenAmount(purchaseAmount);
-            }
-        }
-    }, [tokenFormattedBalance]);
 
     useEffect(async () => {
         if (!wallet.Path1899)
@@ -189,7 +175,7 @@ const SendBip70 = ({ passLoadingStatus }) => {
         if (
             !window.location ||
             !window.location.hash ||
-            (window.location.search == '' && window.location.hash === '#/sendBip70')
+            (window.location.search == '' && window.location.hash === '#/selfMint')
         ) {
             passLoadingStatus(false);
             return;
@@ -204,50 +190,23 @@ const SendBip70 = ({ passLoadingStatus }) => {
             .split('&');
 
         // Iterate over this to create object
-        const prInfo = {};
+        let authCode;
         for (let i = 0; i < txInfoArr.length; i += 1) {
             const delimiterIndex = txInfoArr[i].indexOf('=');
             const param = txInfoArr[i]
                 .slice(0, delimiterIndex)
                 .toLowerCase();
-            // Forward to selfMint if auth code is specified
-            if (param == 'mintauth') {
-                console.log('has mintauth')
-                return history.push('/selfMint');
-            }
-
             const encodedValue = txInfoArr[i].slice(delimiterIndex+1);
             const value = decodeURIComponent(encodedValue);
-            const prefix = value.split(':')[0];
-            if (param === 'uri' && prefixesArray.includes(prefix)) {
-                const queryString = value.split('?')[1];
-                const url = getUrlFromQueryString(queryString);
-                if (url) {
-                    prInfo.type = prefix.toLowerCase();
-                    prInfo.url = url;
-                }
+            if (param === 'mintauth') {
+                authCode = value;
             }
         }
-        console.log(`prInfo from page params`, prInfo);
-        if (prInfo.url && prInfo.type) {
-            try {
-                prInfo.paymentDetails = (await getPaymentRequest(
-                    prInfo.url, 
-                    prInfo.type
-                )).paymentDetails;
-            } catch (err) {
-                return errorNotification(err, 
-                    'Failed to fetch invoice. May be expired or invalid', 
-                    `Fetching invoice: ${prInfo.url}`
-                );
-            }
-        }
-        setPrInfoFromUrl(prInfo);
-        prInfo.paymentDetails.type = prInfo.type;
-        await populateFormsFromPaymentDetails(prInfo.paymentDetails);
+        console.log(`authCode`, authCode);
+        setAuthCodeB64(authCode)
 
         passLoadingStatus(false);
-    }, []);
+    }, [authCodeB64]);
 
     async function populateFormsFromPaymentDetails(paymentDetails) {
         if (!paymentDetails)
@@ -285,15 +244,15 @@ const SendBip70 = ({ passLoadingStatus }) => {
                 const totalBase = sendRecords.reduce((total, record) => {
                     return total.add(U64.fromBE(Buffer.from(record.value)));
                 }, U64.fromInt(0));
-                console.log('totalBase', totalBase);
 
                 const tokenInfo = await fetch(
                     `${getBcashRestUrl()}/token/${tokenIdBuf.toString('hex')}`
                 ).then(res => res.json());
 
                 txInfo.address = tokenAddress;
-                const tokenValue = totalBase.toInt() / (10 ** tokenInfo.decimals);
-                txInfo.value = `${tokenValue}`;
+                txInfo.value = totalBase
+                    .divn(10 ** tokenInfo.decimals)
+                    .toString();
                 txInfo.token = tokenInfo;
             }
         }
@@ -336,42 +295,54 @@ const SendBip70 = ({ passLoadingStatus }) => {
             dirty: false,
         });
 
-        const { paymentDetails, type } = prInfoFromUrl;
-
         // ensure prInfo exists
-        if (!paymentDetails) {
+        if (!authCodeB64) {
             return;
         }
 
+        // TODO: Handle many different tokens
+        const tokenId = Buffer.from(
+            authPubKeys[0].tokenId,
+            'hex'
+        );
+
         // Event("Category", "Action", "Label")
         // Track number of XEC BIP70 transactions
-        Event('SendBip70.js', 'SendBip70', type);
+        Event('SelfMint.js', 'SelfMint', authCodeB64);
 
         passLoadingStatus(true);
 
         try {
             // Send transaction
-            const link = await sendBip70(
+            const link = await sendSelfMint(
                 wallet,
-                paymentDetails,
-                currency.defaultFee,
+                tokenId,
+                authCodeB64,
                 false // testOnly
             );
-            if (type == 'ecash')
-                sendTokenNotification(link);
-            else {
-                sendXecNotification(link);
-            }
+
+            sendXecNotification(link);
             // Sleep for 3 seconds and then 
             await sleep(3000);
             // Manually disable loading
             passLoadingStatus(false);
-            window.history.replaceState(null, '', window.location.origin);
+            // String replaceAll case-insensitive
+            String.prototype.replaceAll = function(strReplace, strWith) {
+                // See http://stackoverflow.com/a/3561711/556609
+                var esc = strReplace.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                var reg = new RegExp(esc, 'ig');
+                return this.replace(reg, strWith);
+            };
+            const searchMask = `mintauth=${authCodeB64}`;
+            // Remove mintauth parameter and value from url
+            window.history.replaceState(
+                null, 
+                '', 
+                window.location.href.replaceAll(searchMask, '')
+            );
             return history.push(`/wallet`);
         } catch (e) {
-            const ticker = type == 'etoken' ?
-                currency.tokenTicker : currency.ticker;
-            handleSendXecError(e, ticker);
+            handleSendXecError(e, authCodeB64);
         }
         
         // Clear the address field
@@ -408,7 +379,7 @@ const SendBip70 = ({ passLoadingStatus }) => {
 
     const checkSufficientFunds = () => {
         if (formData.token) {
-            return Number(tokenFormattedBalance) >= Number(formData.value)
+            return Number(tokenFormattedBalance) > Number(formData.value)
         } else if (formData) {
             return Number(balances.totalBalance) > Number(formData.value)
         }
@@ -598,17 +569,13 @@ const SendBip70 = ({ passLoadingStatus }) => {
                                 paddingTop: '12px',
                             }}
                         >
-                            {!checkSufficientFunds() ||
-                            apiError ||
-                            sendBchAmountError ||
-                            sendBchAddressError ||
-                            !prInfoFromUrl ? (
-                                <SecondaryButton>Send</SecondaryButton>
+                            {!authCodeB64 ? (
+                                <SecondaryButton>Mint Tokens</SecondaryButton>
                             ) : (
                                 <PrimaryButton
-                                    onClick={() => showModal()}
+                                    onClick={() => send()}
                                 >
-                                    Send
+                                    Mint Tokens
                                 </PrimaryButton>
                             )}
                         </div>
@@ -627,14 +594,14 @@ in order to pass the rendering unit test in SendBip70.test.js
 status => {console.log(status)} is an arbitrary stub function
 */
 
-SendBip70.defaultProps = {
+SelfMint.defaultProps = {
     passLoadingStatus: status => {
         console.log(status);
     },
 };
 
-SendBip70.propTypes = {
+SelfMint.propTypes = {
     passLoadingStatus: PropTypes.func,
 };
 
-export default SendBip70;
+export default SelfMint;

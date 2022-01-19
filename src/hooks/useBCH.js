@@ -12,11 +12,17 @@ import {
     convertToEcashPrefix,
 } from '@utils/cashMethods';
 import { postPayment } from '@utils/bip70';
+import { 
+    TXUtil,
+    authPubKeys,
+    buildOutScript
+} from '@utils/selfMint';
 import cashaddr from 'ecashaddrjs';
 import { U64 } from 'n64';
 import { 
     Input,
     Output,
+    Outpoint,
     Coin, 
     MTX,
     KeyRing,
@@ -25,6 +31,12 @@ import {
     utils,
     script
 } from 'bcash';
+import {
+    Hash160,
+    SHA256,
+    secp256k1
+} from 'bcrypto';
+import { read } from 'bufio';
 
 const { 
     SLP,
@@ -250,6 +262,12 @@ export default function useBCH() {
         return cashtabTokenInfo;
     };
 
+    const getUtxoBcash = async (hash, index) => {
+        return fetch(`${getBcashRestUrl()}/coin/${hash}/${index}?slp=true`)
+            .then(res => res.json())
+            .catch(err => null);
+    };
+
     const getUtxosBcash = async (addresses) => {
         const result = []
         const utxoPromises = addresses.map(address => {
@@ -269,17 +287,21 @@ export default function useBCH() {
             ]
         }
         return allUtxos;
-    }
+    };
 
     const getSlpBalancesAndUtxosBcash = async (utxos) => {
         // Prevent app from treating slpUtxos as nonSlpUtxos
         // Do not classify any utxos that include token information as nonSlpUtxos
-        const nonSlpUtxos = utxos.filter(utxo => !utxo.slp);
+        const nonSlpUtxos = utxos.filter(utxo => 
+            !utxo.slp || (utxo.slp && utxo.slp.value == '0')
+        );
 
         // To be included in slpUtxos, the utxo must
         // have utxo.isValid = true
-        // If utxo has a utxo.tokenQty field, i.e. not a minting baton, then utxo.tokenQty !== '0'
-        const slpUtxos = utxos.filter(utxo => utxo.slp);
+        // If utxo has a utxo.tokenQty field, i.e. not a minting baton, then utxo.value !== '0'
+        const slpUtxos = utxos.filter(utxo => 
+            utxo.slp && ( utxo.slp.value != '0' || utxo.slp.type == 'MINT')
+        );
 
         let tokensById = {};
 
@@ -458,7 +480,7 @@ export default function useBCH() {
         return genesisOpReturn;
     };
 
-    const buildMintOpReturn = (tokenId, mintQuantity) => {
+    const buildMintOpReturn = (tokenId, mintQuantityBufBE) => {
         const mintOpReturn = new Script()
                 .pushSym('return')
                 .pushData(Buffer.concat([
@@ -469,7 +491,7 @@ export default function useBCH() {
                 .pushData(Buffer.from('MINT', 'ascii'))
                 .pushData(tokenId)
                 .pushPush(Buffer.alloc(1, 2))
-                .pushData(U64.fromString(mintQuantity).toBE(Buffer))
+                .pushData(mintQuantityBufBE)
                 .compile();
         return mintOpReturn
     };
@@ -930,7 +952,7 @@ export default function useBCH() {
         })
 
         const slpBalancesAndUtxos = wallet.state.slpBalancesAndUtxos;
-        const nonSlpCoins = slpBalancesAndUtxos.nonSlpUtxos.map( utxo => 
+        let nonSlpCoins = slpBalancesAndUtxos.nonSlpUtxos.map( utxo => 
             Coin.fromJSON(utxo)
         );
 
@@ -938,6 +960,7 @@ export default function useBCH() {
         const firstOutput = paymentDetails.outputs[0]
         const slpScript = SLP.fromRaw(Buffer.from(firstOutput.script));
         const isSlp = slpScript.isValidSlp();
+        let postagePaid = false;
         const tokenCoins = [];
         // If is Slp, 
         if (isSlp) {
@@ -1017,24 +1040,45 @@ export default function useBCH() {
                     break;
                 }
             }
+            // Is Postage Paid by Merchant?
+            const merchantData = paymentDetails.getData('json');
+            if (typeof merchantData === "object" && merchantData.postage) {
+                const stamps = merchantData.postage.stamps;
+                const listing = stamps.find(stamp => stamp.tokenId == tokenId);
+                // If postage is paid don't use native token funding
+                if (listing && listing.rate == 0) {
+                    postagePaid = true;
+                }
+            }
         }
 
         // Build Transaction
         const tx = new MTX();
+        // Set SigHashType
+        let sigHashType = Script.hashType.ALL | Script.hashType.SIGHASH_FORKID;
 
         // Add required outputs
         for (let i = 0; i < paymentDetails.outputs.length; i++) {
-            tx.addOutput(paymentDetails.outputs[i])
+            tx.addOutput(paymentDetails.outputs[i]);
         }
 
-        await tx.fund([
-                ...tokenCoins,
-                ...nonSlpCoins
-            ], {
-            inputs: tokenCoins.map(coin => Input.fromCoin(coin).prevout),
-            changeAddress: REMAINDER_ADDR,
-            rate: feeInSatsPerByte * 1000 // 1000 sats per kb = 1 sat/b
-        });
+        if (postagePaid) {
+            // Postage Protocol requires ANYONECANPAY
+            sigHashType = Script.hashType.ANYONECANPAY | sigHashType;
+
+            for (let i = 0; i < tokenCoins.length; i++) {
+                tx.addCoin(tokenCoins[i]);
+            }
+        } else {
+            await tx.fund([
+                    ...tokenCoins,
+                    ...nonSlpCoins
+                ], {
+                inputs: tokenCoins.map(coin => Input.fromCoin(coin).prevout),
+                changeAddress: REMAINDER_ADDR,
+                rate: feeInSatsPerByte * 1000 // 1000 sats per kb = 1 sat/b
+            });
+        }
 
         const keyRingArray = [
             KeyRing.fromSecret(wallet.Path245.fundingWif),
@@ -1042,7 +1086,7 @@ export default function useBCH() {
             KeyRing.fromSecret(wallet.Path1899.fundingWif)
         ];
 
-        tx.sign(keyRingArray);
+        tx.sign(keyRingArray, sigHashType);
 
         // output rawhex
         const rawTx = tx.toRaw()
@@ -1086,6 +1130,172 @@ export default function useBCH() {
         return link;
     };
 
+    const sendSelfMint = async (
+        wallet,
+        tokenId, // Buffer
+        authCode,
+        testOnly = false
+    ) => {
+        try {
+            const tokenIdString = tokenId.toString('hex');
+            // Process entered Auth Code string
+            const authReader = read(Buffer.from(authCode, 'base64'));
+            const mintQuantity = authReader.readBytes(8);
+            const stampRawOutpoint = authReader.readBytes(36);
+            const stampOutpoint = Outpoint.fromRaw(stampRawOutpoint);
+            // Auth signature is remaining bytes
+            const txAuthSig = authReader.readBytes(authReader.getSize() - authReader.offset);
+            // console.log('stampRawoutpoint', stampRawOutpoint);
+            // console.log('txAuthSig', txAuthSig);
+
+            // Get authPubKey for token
+            const { pubkey: authPubKey } = authPubKeys.find(authObj => 
+                authObj.tokenId == tokenIdString
+            );
+            // console.log('authKeyBuf', Buffer.from(authPubKey, 'hex'));
+            if (!authPubKey)
+                throw new Error(`Unsupported self-mint token ID: ${tokenIdString}`);
+
+            // Build Baton Outscript
+            const outscript = buildOutScript(
+                Buffer.from(authPubKey, 'hex'),
+                false
+            );
+            const outScriptHash = Hash160.digest(outscript.toRaw());
+            const p2shPubKeyScript = Script.fromScripthash(outScriptHash);
+            const p2shAddress = p2shPubKeyScript.getAddress();
+
+            // Find Baton
+            const batonAddrUtxos = await getUtxosBcash([
+                p2shAddress.toCashAddr()
+            ]);
+            const batonUtxo = batonAddrUtxos.find(u => 
+                u.slp.tokenId == tokenIdString && u.slp.type == 'BATON'
+            );
+
+            // Stub coin/utxo for "stamp" and baton
+            const batonCoin = Coin.fromJSON(batonUtxo);
+
+            // Build Stamp Outscript
+            const stampOutscript = buildOutScript(
+                Buffer.from(authPubKey, 'hex'), 
+                true
+            );
+            const stampOutScriptHash = Hash160.digest(stampOutscript.toRaw());
+            const stampP2shPubKeyScript = Script.fromScripthash(stampOutScriptHash);
+            const stampUtxo = await getUtxoBcash(
+                stampOutpoint.txid().toString('hex'),
+                stampOutpoint.index
+            )
+
+            if (!stampUtxo)
+                throw new Error('Stamp UTXO in auth code is spent or invalid');
+
+            const stampCoin = Coin.fromJSON(stampUtxo);
+
+            const keyring = KeyRing.fromSecret(wallet.Path1899.fundingWif);
+            // Construct transaction
+            const tx = new TXUtil()
+            // Build MINT OP_RETURN
+            const mintOpReturn = buildMintOpReturn(tokenId, mintQuantity);
+            // Add outputs
+            tx.addOutput(mintOpReturn, 0) // SLP mint OP_RETURN
+            tx.addOutput(keyring.getAddress(), 546) // Minted tokens
+            tx.addOutput(p2shAddress, 546) // Mint baton return
+            // Add inputs (must be in this order)
+            tx.addCoin(stampCoin) // Input index 0: "stamp"
+            tx.addCoin(batonCoin); // Input index 1: existing mint baton
+
+            const sigHashType = Script.hashType.ALL | Script.hashType.SIGHASH_FORKID;
+            const flags = Script.flags.STANDARD_VERIFY_FLAGS;
+
+            // Sign TX
+            tx.template(keyring); // prepares the template
+            // Get the prevout and outputs sequences as they appear in the preimage
+            const rawOutputs= tx.outputs.map(output => output.toRaw());
+            const outputSeq = Buffer.concat(rawOutputs);
+            const rawPrevouts= tx.inputs.map(input => input.prevout.toRaw());
+            const prevoutSeq = Buffer.concat(rawPrevouts);
+            // Sign The Stamp and Baton
+            for (let i = 0; i < 2; i++) {
+                const {prevout} = tx.inputs[i];
+                const p2shCoin = tx.view.getOutput(prevout);
+                const subscript = i == 0 ? stampOutscript : outscript;
+                const sig = tx.signature(i, subscript, p2shCoin.value, keyring.privateKey, sigHashType, flags);
+                const preimage = tx.getPreimage(i, subscript, p2shCoin.value, sigHashType, false);
+                const items = [
+                    sig,
+                    keyring.getPublicKey(),
+                    Buffer.from(preimage.toString('hex'), 'hex'),  
+                    txAuthSig,
+                    outputSeq,
+                    prevoutSeq,
+                    subscript.toRaw()
+                ];
+                tx.inputs[i].script.fromItems(items);
+            }
+
+            const hex = tx.toRaw().toString('hex')
+
+            // Verify
+            // const mintMsgBuf = Buffer.concat([
+            //     stampRawOutpoint,
+            //     tx.outputs[0].toRaw(),
+            //     tx.outputs[1].toRaw(),
+            //     tx.outputs[2].toRaw(),
+            // ])
+            // console.log('mintMsgBuf', mintMsgBuf);
+            // console.log('mintMsgBufHash', SHA256.digest(mintMsgBuf));
+            // console.log('checking index 0');
+            // const checkBaton = tx.checkInput(0, stampCoin);
+            // console.log('checking index 1');
+            // const checkStamp = tx.checkInput(1, batonCoin);
+            const verified = tx.verify(tx.view);
+            
+            console.log('verified', verified);
+            console.log('tx size', tx.getSize());
+            console.log('fee', tx.getFee());
+            console.log('tx hex', hex);
+
+            if (!verified)
+                throw new Error('Transaction verification failed');
+        
+            // Broadcast transaction to the network
+            let broadcast = {success: true};
+            if (!testOnly)
+                broadcast = await broadcastTx(hex);
+            const txidStr = tx.txid().toString('hex')
+
+            if (broadcast.success) {
+                console.log(`${currency.tokenTicker} txid`, txidStr);
+            }
+            let link;
+            if (process.env.REACT_APP_NETWORK === `mainnet`) {
+                link = `${currency.tokenExplorerUrl}/tx/${txidStr}`;
+            } else {
+                link = `${currency.blockExplorerUrlTestnet}/tx/${txidStr}`;
+            }
+            //console.log(`link`, link);
+
+            return link;
+        } catch (err) {
+            if (err.error === 'insufficient priority (code 66)') {
+                err.code = SEND_BCH_ERRORS.INSUFFICIENT_PRIORITY;
+            } else if (err.error === 'txn-mempool-conflict (code 18)') {
+                err.code = SEND_BCH_ERRORS.DOUBLE_SPENDING;
+            } else if (err.error === 'Network Error') {
+                err.code = SEND_BCH_ERRORS.NETWORK_ERROR;
+            } else if (
+                err.error ===
+                'too-long-mempool-chain, too many unconfirmed ancestors [limit: 25] (code 64)'
+            ) {
+                err.code = SEND_BCH_ERRORS.MAX_UNCONFIRMED_TXS;
+            }
+            console.log(`error: `, err);
+            throw err;
+        }
+    }
+
     return {
         calcFee,
         getUtxosBcash,
@@ -1098,6 +1308,7 @@ export default function useBCH() {
         sendXec,
         sendToken,
         sendBip70,
+        sendSelfMint,
         createToken,
     };
 }
