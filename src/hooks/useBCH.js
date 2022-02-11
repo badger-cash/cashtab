@@ -195,14 +195,18 @@ export default function useBCH() {
         return parsedTxHistory;
     };
 
-    const getTxHistoryBcash = async (addresses) => {
+    const getTxHistoryBcash = async (
+        addresses,
+        limit = 30,
+        reverse = true
+    ) => {
         const result = []
         const utxoPromises = addresses.map(address => {
             const addr = convertToEcashPrefix(address);
             result.push({
                 address: addr
             });
-            return fetch(`${getBcashRestUrl()}/tx/address/${addr}?slp=true&limit=30&reverse=true`)
+            return fetch(`${getBcashRestUrl()}/tx/address/${addr}?slp=true&limit=${limit}&reverse=${reverse}`)
                 .then(res => res.json());
         });
         const txs = await Promise.all(utxoPromises);
@@ -964,12 +968,6 @@ export default function useBCH() {
         const tokenCoins = [];
         // If is Slp, 
         if (isSlp) {
-            // Handle error of user having no BCH
-            if (slpBalancesAndUtxos.nonSlpUtxos.length === 0) {
-                throw new Error(
-                    `You need some ${currency.ticker} to send ${currency.tokenTicker}`,
-                );
-            }
 
             // Throw error if transaction type is not SEND
             const slpType = slpScript.getType();
@@ -1026,22 +1024,28 @@ export default function useBCH() {
                 if (totalBase.lte(finalTokenAmountSent)) {
                     // Add token change amount to SLP OP_RETURN
                     const tokenChangeAmount = finalTokenAmountSent.sub(totalBase);
-                    slpScript.pushData(tokenChangeAmount.toBE(Buffer)).compile();
-                    // add additional output for change
-                    paymentDetails.outputs[0].script = slpScript.toRaw()
-                    paymentDetails.outputs.splice(
-                        sendRecords.length + 1, // Must skip OP_RETURN
-                        0,
-                        {
-                            script: refundOutput.script.toRaw(),
-                            value: 546
-                        }
-                    );
+                    // Skip if change amount is zero
+                    if (tokenChangeAmount.toInt() != 0) {
+                        slpScript.pushData(tokenChangeAmount.toBE(Buffer)).compile();
+                        // add additional output for change
+                        paymentDetails.outputs[0].script = slpScript.toRaw()
+                        paymentDetails.outputs.splice(
+                            sendRecords.length + 1, // Must skip OP_RETURN
+                            0,
+                            {
+                                script: refundOutput.script.toRaw(),
+                                value: 546
+                            }
+                        );
+                    }
                     break;
                 }
             }
+
             // Is Postage Paid by Merchant?
             const merchantData = paymentDetails.getData('json');
+            console.log('merchantData', merchantData)
+            console.log('typeof merchantData', typeof merchantData)
             if (typeof merchantData === "object" && merchantData.postage) {
                 const stamps = merchantData.postage.stamps;
                 const listing = stamps.find(stamp => stamp.tokenId == tokenId);
@@ -1049,6 +1053,14 @@ export default function useBCH() {
                 if (listing && listing.rate == 0) {
                     postagePaid = true;
                 }
+            }
+            console.log('postagePaid', postagePaid);
+
+            // Handle error of user having no BCH and postage not paid
+            if (!postagePaid && slpBalancesAndUtxos.nonSlpUtxos.length === 0) {
+                throw new Error(
+                    `You need some ${currency.ticker} to send ${currency.tokenTicker}`,
+                );
             }
         }
 
@@ -1130,6 +1142,21 @@ export default function useBCH() {
         return link;
     };
 
+    const readAuthCode = (authCode) => {
+        const authReader = read(Buffer.from(authCode, 'base64'));
+        const mintQuantity = authReader.readBytes(8);
+        const stampRawOutpoint = authReader.readBytes(36);
+        const stampOutpoint = Outpoint.fromRaw(stampRawOutpoint);
+        // Auth signature is remaining bytes
+        const txAuthSig = authReader.readBytes(authReader.getSize() - authReader.offset);
+
+        return {
+            mintQuantity,
+            stampOutpoint,
+            txAuthSig
+        }
+    }
+
     const sendSelfMint = async (
         wallet,
         tokenId, // Buffer
@@ -1139,12 +1166,11 @@ export default function useBCH() {
         try {
             const tokenIdString = tokenId.toString('hex');
             // Process entered Auth Code string
-            const authReader = read(Buffer.from(authCode, 'base64'));
-            const mintQuantity = authReader.readBytes(8);
-            const stampRawOutpoint = authReader.readBytes(36);
-            const stampOutpoint = Outpoint.fromRaw(stampRawOutpoint);
-            // Auth signature is remaining bytes
-            const txAuthSig = authReader.readBytes(authReader.getSize() - authReader.offset);
+            const {
+                mintQuantity,
+                stampOutpoint,
+                txAuthSig
+            } = readAuthCode(authCode);
             // console.log('stampRawoutpoint', stampRawOutpoint);
             // console.log('txAuthSig', txAuthSig);
 
@@ -1262,8 +1288,12 @@ export default function useBCH() {
         
             // Broadcast transaction to the network
             let broadcast = {success: true};
-            if (!testOnly)
+            if (!testOnly) {
                 broadcast = await broadcastTx(hex);
+                if (broadcast.error)
+                    throw broadcast.error
+            }
+
             const txidStr = tx.txid().toString('hex')
 
             if (broadcast.success) {
@@ -1298,6 +1328,7 @@ export default function useBCH() {
 
     return {
         calcFee,
+        getUtxoBcash,
         getUtxosBcash,
         getSlpBalancesAndUtxosBcash,
         getTxHistoryBcash,
@@ -1308,6 +1339,7 @@ export default function useBCH() {
         sendXec,
         sendToken,
         sendBip70,
+        readAuthCode,
         sendSelfMint,
         createToken,
     };

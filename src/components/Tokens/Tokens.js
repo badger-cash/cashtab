@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { useHistory } from 'react-router-dom';
 import { WalletContext } from '@utils/context';
 import { fromSmallestDenomination, getWalletState } from '@utils/cashMethods';
 import TokenIconAlert from '@components/Common/Alerts.js';
@@ -12,6 +13,15 @@ import BalanceHeader from '@components/Common/BalanceHeader';
 import BalanceHeaderFiat from '@components/Common/BalanceHeaderFiat';
 import { ZeroBalanceHeader, AlertMsg } from '@components/Common/Atoms';
 import ApiError from '@components/Common/ApiError';
+import styled from 'styled-components';
+import PrimaryButton from '@components/Common/PrimaryButton';
+
+const StyledSpacer = styled.div`
+    height: 1px;
+    width: 100%;
+    background-color: ${props => props.theme.wallet.borders.color};
+    margin: 60px 0 50px;
+`;
 
 const Tokens = ({ jestBCH, passLoadingStatus }) => {
     /*
@@ -34,6 +44,8 @@ const Tokens = ({ jestBCH, passLoadingStatus }) => {
     const { balances, tokens } = walletState;
 
     const { getBcashRestUrl, createToken } = useBCH();
+
+    const history = useHistory();
 
     return (
         <>
@@ -100,6 +112,12 @@ const Tokens = ({ jestBCH, passLoadingStatus }) => {
             ) : (
                 <>No {currency.tokenTicker} tokens in this wallet</>
             )}
+            <StyledSpacer />
+            <PrimaryButton
+                onClick={() => history.push('/selfmint')}
+            >
+                Self Mint Tokens
+            </PrimaryButton>
         </>
     );
 };

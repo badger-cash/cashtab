@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import makeBlockie from 'ethereum-blockies-base64';
 import { Img } from 'react-image';
 import { currency } from '@components/Common/Ticker';
+import { authPubKeys } from '@utils/selfMint';
 
 const TokenIcon = styled.div`
     height: 32px;
@@ -39,12 +40,19 @@ const Wrapper = styled.div`
 `;
 
 const TokenListItem = ({ ticker, balance, tokenId, name }) => {
+    const srcUrls = [`${currency.tokenIconsUrl}/32/${tokenId}.png`]
+    const authPubKey = authPubKeys.find(authObj => 
+        authObj.tokenId == tokenId && authObj.imageUrl
+    );
+    if (authPubKey)
+        srcUrls.push(authPubKey.imageUrl);
+
     return (
         <Wrapper>
             <TokenIcon>
                 {currency.tokenIconsUrl !== '' ? (
                     <Img
-                        src={`${currency.tokenIconsUrl}/32/${tokenId}.png`}
+                        src={srcUrls}
                         width={32}
                         height={32}
                         unloader={

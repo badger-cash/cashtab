@@ -6,8 +6,7 @@ import {
 import PropTypes from 'prop-types';
 import { WalletContext } from '@utils/context';
 import {
-    SendBip70Input,
-    Bip70AddressSingle,
+    SelfMintAuthCode
 } from '@components/Common/EnhancedInputs';
 import {
     Form,
@@ -54,9 +53,13 @@ import {
 } from 'bcash';
 const { SLP } = script;
 import { U64 } from 'n64';
+import { SelfMintPurchaseAmount } from '../Common/EnhancedInputs';
 
-const MemoLabel = styled.div`
-    color: purple;
+const StyledSpacer = styled.div`
+    height: 1px;
+    width: 100%;
+    background-color: ${props => props.theme.wallet.borders.color};
+    margin: 60px 0 50px;
 `;
 
 const SelfMint = ({ passLoadingStatus }) => {
@@ -73,11 +76,7 @@ const SelfMint = ({ passLoadingStatus }) => {
         tokens,
         balances
     } = walletState;
-    // Modal settings
-    const purchaseTokenIds = [
-        '744354f928fa48de87182c4024e2c4acbd3c34f42ce9d679f541213688e584b1'
-    ];
-
+    
     const blankFormData = {
         dirty: true,
         value: '',
@@ -100,37 +99,11 @@ const SelfMint = ({ passLoadingStatus }) => {
         }
     }
     const [authCodeB64, setAuthCodeB64] = useState(null);
-    const [sendBchAddressError, setSendBchAddressError] = useState(false);
-    const [sendBchAmountError, setSendBchAmountError] = useState(false);
-    const [selectedCurrency, setSelectedCurrency] = useState(currency.ticker);
-
-    // Support cashtab button from web pages
-    const [prInfoFromUrl, setPrInfoFromUrl] = useState(false);
-
-    // Show a confirmation modal on transactions created by populating form from web page button
-    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [tokenToMint, setTokenToMint] = useState(null);
 
     // Show a purchase modal when BUX is requested and insufficient balance
     const [isPurchaseModalVisible, setIsPurchaseModalVisible] = useState(false);
     const [purchaseTokenAmount, setPurchaseTokenAmount] = useState(0);
-
-    const prefixesArray = [
-        ...currency.prefixes,
-        ...currency.tokenPrefixes
-    ]
-
-    const showModal = () => {
-        setIsModalVisible(true);
-    };
-
-    const handleOk = () => {
-        setIsModalVisible(false);
-        send();
-    };
-
-    const handleCancel = () => {
-        setIsModalVisible(false);
-    };
 
     const handlePurchaseOk = () => {
         setIsPurchaseModalVisible(false);
@@ -157,7 +130,13 @@ const SelfMint = ({ passLoadingStatus }) => {
 
     const history = useHistory();
 
-    const { getBcashRestUrl, sendSelfMint } = useBCH();
+    const { 
+        getBcashRestUrl, 
+        sendSelfMint, 
+        readAuthCode,
+        getTxHistoryBcash,
+        getUtxoBcash
+     } = useBCH();
 
     // If the balance has changed, unlock the UI
     // This is redundant, if backend has refreshed in 1.75s timeout below, UI will already be unlocked
@@ -169,10 +148,10 @@ const SelfMint = ({ passLoadingStatus }) => {
         if (!wallet.Path1899)
             return history.push('/wallet');
         passLoadingStatus(true);
-        // Manually parse for prInfo object on page load when SendBip70.js is loaded with a query string
 
-        // Do not set prInfo in state if query strings are not present
+        // Do not set authCode in state if query strings are not present or code is already set
         if (
+            authCodeB64 ||
             !window.location ||
             !window.location.hash ||
             (window.location.search == '' && window.location.hash === '#/selfMint')
@@ -202,62 +181,72 @@ const SelfMint = ({ passLoadingStatus }) => {
                 authCode = value;
             }
         }
-        console.log(`authCode`, authCode);
-        setAuthCodeB64(authCode)
+        // console.log('authCode', authCode);
+        // If no authcode specified
+        if (!authCode) {
+            passLoadingStatus(false);
+            return;
+        }
+        // Process auth code
+        await processAuthCode(authCode);
 
         passLoadingStatus(false);
     }, [authCodeB64]);
 
-    async function populateFormsFromPaymentDetails(paymentDetails) {
-        if (!paymentDetails)
-            return;
-        const txInfo = {};
-        if (paymentDetails.type === 'ecash') {
-            const address = Script.fromRaw(
-                Buffer.from(paymentDetails.outputs[0].script)
-            ).getAddress().toString();
-            const totalSats = paymentDetails.outputs.reduce((total, output) => {
-                return total + output.value
-            }, 0);
-            txInfo.address = address;
-            txInfo.value = fromSmallestDenomination(totalSats);
-
-        } else if (paymentDetails.type === 'etoken') {
-            const cashAddress = Script.fromRaw(
-                Buffer.from(paymentDetails.outputs[1].script)
-            ).getAddress().toString();
-            const decodedAddress = cashaddr.decode(cashAddress);
-            const tokenAddress = cashaddr.encode(
-            'etoken',
-            decodedAddress.type,
-            decodedAddress.hash
+    async function processAuthCode (authCode) {
+        try {
+        const { mintQuantity, stampOutpoint } = readAuthCode(authCode);
+        const stampUtxo = await getUtxoBcash(
+            stampOutpoint.txid(),
+            stampOutpoint.index
         )
-            const slpScript = SLP.fromRaw(Buffer.from(
-                paymentDetails.outputs[0].script
-            ));
-            // Be sure it is valid SEND
-            if (slpScript.isValidSlp() &&
-                slpScript.getType() === 'SEND'
-            ) {
-                const tokenIdBuf = slpScript.getData(4);
-                const sendRecords = slpScript.getRecords(tokenIdBuf);
-                const totalBase = sendRecords.reduce((total, record) => {
-                    return total.add(U64.fromBE(Buffer.from(record.value)));
-                }, U64.fromInt(0));
-
-                const tokenInfo = await fetch(
-                    `${getBcashRestUrl()}/token/${tokenIdBuf.toString('hex')}`
-                ).then(res => res.json());
-
-                txInfo.address = tokenAddress;
-                txInfo.value = totalBase
-                    .divn(10 ** tokenInfo.decimals)
-                    .toString();
-                txInfo.token = tokenInfo;
-            }
+        if (!stampUtxo) {
+            // remove the mintauth parameter from the url
+            removeMintAuthParam(authCode);
+            return handleSendXecError(
+                new Error(`Invalid authorization code: UTXO in authcode does not exist`),
+                'MINT'
+            );
         }
-        
-        setFormData(txInfo);
+
+        const stampTxs = await getTxHistoryBcash(
+            [stampUtxo.address],
+            10,
+            false
+        );
+        const genesisTx = stampTxs.find(tx => 
+            authPubKeys.find(authObj => 
+                authObj.tokenId == tx.slpToken?.tokenId
+            )
+        );
+        if (!genesisTx) {
+            // remove the mintauth parameter from the url
+            removeMintAuthParam(authCode);
+            return handleSendXecError(
+                new Error(`Invalid authorization code: Authcode is for unsupported self-mint token`),
+                'MINT'
+            );
+        }
+
+        const mintQtyString = U64
+            .fromBE(mintQuantity)
+            .toInt() / (10 ** genesisTx.slpToken.decimals);
+
+        setTokenToMint({
+            ...genesisTx.slpToken,
+            mintQuantity: mintQtyString
+        })
+        setAuthCodeB64(authCode);
+        // remove mintauth url parameter if present
+        removeMintAuthParam(authCode);
+        } catch (err) {
+           // remove the mintauth parameter from the url
+           removeMintAuthParam(authCode);
+           return handleSendXecError(
+               new Error(`Invalid authorization code: Copy and paste a valid auth code`),
+               'MINT'
+           ); 
+        }
     }
 
     function handleSendXecError(errorObj, ticker) {
@@ -280,6 +269,8 @@ const SelfMint = ({ passLoadingStatus }) => {
             )
         ) {
             message = `The ${currency.ticker} you are trying to send has too many unconfirmed ancestors to send (limit 50). Sending will be possible after a block confirmation. Try again in about 10 minutes.`;
+        } else if (errorObj && errorObj.type == 'VerifyError') {
+            message = "Mint transaction rejected. The provided authcode is not valid for the address controlled by this wallet"
         } else {
             message =
                 errorObj.message || errorObj.error || JSON.stringify(errorObj);
@@ -288,6 +279,23 @@ const SelfMint = ({ passLoadingStatus }) => {
         errorNotification(errorObj, message, `Sending ${ticker}`);
 
     }
+
+    function removeMintAuthParam(authCode) {
+        // String replaceAll case-insensitive
+        String.prototype.replaceAll = function(strReplace, strWith) {
+            // See http://stackoverflow.com/a/3561711/556609
+            var esc = strReplace.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            var reg = new RegExp(esc, 'ig');
+            return this.replace(reg, strWith);
+        };
+        const searchMask = `mintauth=${authCode}`;
+        // Remove mintauth parameter and value from url
+        window.history.replaceState(
+            null, 
+            '', 
+            window.location.href.replaceAll(searchMask, '')
+        );
+    } 
 
     async function send() {
         setFormData({
@@ -322,24 +330,13 @@ const SelfMint = ({ passLoadingStatus }) => {
             );
 
             sendXecNotification(link);
-            // Sleep for 3 seconds and then 
-            await sleep(3000);
+            // Sleep for 10 seconds and then 
+            await sleep(8000);
             // Manually disable loading
             passLoadingStatus(false);
-            // String replaceAll case-insensitive
-            String.prototype.replaceAll = function(strReplace, strWith) {
-                // See http://stackoverflow.com/a/3561711/556609
-                var esc = strReplace.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-                var reg = new RegExp(esc, 'ig');
-                return this.replace(reg, strWith);
-            };
-            const searchMask = `mintauth=${authCodeB64}`;
-            // Remove mintauth parameter and value from url
-            window.history.replaceState(
-                null, 
-                '', 
-                window.location.href.replaceAll(searchMask, '')
-            );
+            // Remove mintauth url param
+            removeMintAuthParam(authCodeB64);
+
             return history.push(`/wallet`);
         } catch (e) {
             handleSendXecError(e, authCodeB64);
@@ -351,95 +348,22 @@ const SelfMint = ({ passLoadingStatus }) => {
         passLoadingStatus(false);
     }
 
-    const handleSelectedCurrencyChange = e => {
-        setSelectedCurrency(e);
-        // Clear input field to prevent accidentally sending 1 BCH instead of 1 USD
-        setFormData(p => ({
-            ...p,
-            value: '',
-        }));
+    const handleAuthCodeChange = async e => {
+        const { value } = e.target;
+        console.log('value', value);
+        passLoadingStatus(true);
+        processAuthCode(value);
     };
 
-    const handleBchAmountChange = e => {
-        const { value, name } = e.target;
-        let bchValue = value;
-        const error = shouldRejectAmountInput(
-            bchValue,
-            selectedCurrency,
-            fiatPrice,
-            balances.totalBalance,
-        );
-        setSendBchAmountError(error);
-
-        setFormData(p => ({
-            ...p,
-            [name]: value,
-        }));
-    };
-
-    const checkSufficientFunds = () => {
-        if (formData.token) {
-            return Number(tokenFormattedBalance) > Number(formData.value)
-        } else if (formData) {
-            return Number(balances.totalBalance) > Number(formData.value)
-        }
-        return false
+    const handlePurchaseAmountChange = async e => {
+        const { value } = e.target;
+        setPurchaseTokenAmount(Number(value).toFixed(2));
     }
 
-    // Display price in USD below input field for send amount, if it can be calculated
-    let fiatPriceString = '';
-    if (fiatPrice !== null && !isNaN(formData.value)) {
-        if (selectedCurrency === currency.ticker) {
-            // calculate conversion to fiatPrice
-            fiatPriceString = `${(fiatPrice * Number(formData.value)).toFixed(
-                2,
-            )}`;
-
-            // formats to fiat locale style
-            fiatPriceString = formatFiatBalance(Number(fiatPriceString));
-
-            // insert symbol and currency before/after the locale formatted fiat balance
-            fiatPriceString = `${
-                cashtabSettings
-                    ? `${
-                          currency.fiatCurrencies[cashtabSettings.fiatCurrency]
-                              .symbol
-                      } `
-                    : '$ '
-            } ${fiatPriceString} ${
-                cashtabSettings && cashtabSettings.fiatCurrency
-                    ? cashtabSettings.fiatCurrency.toUpperCase()
-                    : 'USD'
-            }`;
-        } else {
-            fiatPriceString = `${
-                formData.value
-                    ? formatFiatBalance(
-                          Number(fiatToCrypto(formData.value, fiatPrice)),
-                      )
-                    : formatFiatBalance(0)
-            } ${currency.ticker}`;
-        }
-    }
-
-    const priceApiError = fiatPrice === null && selectedCurrency !== 'XEC';
-
-    const displayBalance = tokenFormattedBalance || balances.totalBalance;
     const displayTicker = formData.token?.ticker || currency.ticker;
 
     return (
         <>
-            <Modal
-                title="Confirm Send"
-                visible={isModalVisible}
-                onOk={handleOk}
-                onCancel={handleCancel}
-            >
-                <p>
-                    Are you sure you want to send {formData.value}{' '}
-                    {displayTicker} to settle this payment request?
-                </p>
-            </Modal>
             <Modal
                 title={`Purchase ${displayTicker}`}
                 visible={isPurchaseModalVisible}
@@ -447,30 +371,22 @@ const SelfMint = ({ passLoadingStatus }) => {
                 onCancel={handlePurchaseCancel}
             >
                 <p>
-                    You have insufficient funds. Do you want to purchase {' '}
-                    <strong>{purchaseTokenAmount}{' '}{displayTicker}{' '}</strong>
-                    in order to be able to settle this payment request?
+                    Do you want to purchase a Self Mint authorization code for {' '}
+                    <strong>{purchaseTokenAmount}{' '}BUX</strong>?
                 </p>
             </Modal>
-            {!checkSufficientFunds() ? (
+            {!tokenToMint ? (
                 <ZeroBalanceHeader>
-                    You currently have {displayBalance} {displayTicker}
+                    Would you like to mint new tokens?
                     <br />
-                    Deposit some funds to use this feature
+                    Please provide a valid Self Mint Authorization Code
                 </ZeroBalanceHeader>
             ) : (
                 <>
                     <BalanceHeader
-                        balance={displayBalance}
-                        ticker={displayTicker}
+                        balance={tokenToMint.mintQuantity.toString()}
+                        ticker={tokenToMint.ticker}
                     />
-                    {fiatPrice !== null && (
-                        <BalanceHeaderFiat
-                            balance={balances.totalBalance}
-                            settings={cashtabSettings}
-                            fiatPrice={fiatPrice}
-                        />
-                    )}
                 </>
             )}
 
@@ -481,81 +397,16 @@ const SelfMint = ({ passLoadingStatus }) => {
                             width: 'auto',
                         }}
                     >
-                        {prInfoFromUrl 
-                            && prInfoFromUrl.paymentDetails && (
+                        {(!tokenToMint) && (
                             <>
-                                <Button
-                                    type="text"
-                                    block
-                                >
-                                    <MemoLabel>
-                                        {prInfoFromUrl.paymentDetails.memo}
-                                    </MemoLabel>
-                                </Button>
-                                <Bip70AddressSingle
-                                    validateStatus={
-                                        sendBchAddressError ? 'error' : ''
-                                    }
-                                    help={
-                                        sendBchAddressError
-                                            ? sendBchAddressError
-                                            : ''
-                                    }
+                                <SelfMintAuthCode
                                     inputProps={{
-                                        placeholder: `${currency.ticker} Address`,
-                                        name: 'address',
+                                        placeholder: `Enter Self Mint Authorization Code`,
+                                        name: 'authcode',
                                         required: true,
-                                        value: formData.address,
+                                        onChange: e => handleAuthCodeChange(e),
                                     }}
-                                ></Bip70AddressSingle>
-                                <SendBip70Input
-                                    activeTokenCode={
-                                        formData &&
-                                        formData.token
-                                            ? formData.token.ticker
-                                            : currency.ticker
-                                    }
-                                    validateStatus={
-                                        sendBchAmountError ? 'error' : ''
-                                    }
-                                    help={
-                                        sendBchAmountError
-                                            ? sendBchAmountError
-                                            : ''
-                                    }
-                                    inputProps={{
-                                        name: 'value',
-                                        dollar:
-                                            selectedCurrency === 'USD' ? 1 : 0,
-                                        placeholder: 'Amount',
-                                        onChange: e => handleBchAmountChange(e),
-                                        required: true,
-                                        value: formData.value,
-                                        token: formData.token
-                                    }}
-                                    selectProps={{
-                                        disabled: queryStringText !== null,
-                                        onChange: e =>
-                                            handleSelectedCurrencyChange(e),
-                                    }}
-                                ></SendBip70Input>
-                                {!formData.token && priceApiError && (
-
-                                    <AlertMsg>
-                                        Error fetching fiat price. Setting send
-                                        by{' '}
-                                        {currency.fiatCurrencies[
-                                            cashtabSettings.fiatCurrency
-                                        ].slug.toUpperCase()}{' '}
-                                        disabled
-                                    </AlertMsg>
-                                )}
-                                {!formData.token && (
-                                    <ConvertAmount>
-                                        {fiatPriceString !== '' && '='}{' '}
-                                        {fiatPriceString}
-                                    </ConvertAmount>
-                                )}
+                                ></SelfMintAuthCode>
                             </>
                         )}
                         <div
@@ -569,7 +420,7 @@ const SelfMint = ({ passLoadingStatus }) => {
                                 paddingTop: '12px',
                             }}
                         >
-                            {!authCodeB64 ? (
+                            {!tokenToMint ? (
                                 <SecondaryButton>Mint Tokens</SecondaryButton>
                             ) : (
                                 <PrimaryButton
@@ -583,13 +434,64 @@ const SelfMint = ({ passLoadingStatus }) => {
                     </Form>
                 </Col>
             </Row>
+            {(!authCodeB64 || !tokenToMint) && (
+                <>
+                    <StyledSpacer />
+                    <ZeroBalanceHeader>
+                    Don't have an authorization code? Purchase one.
+                    <br />
+                    How many BUX tokens do you want to mint?
+                    </ZeroBalanceHeader>
+                    <Row type="flex">
+                        <Col span={24}>
+                            <Form
+                                style={{
+                                    width: 'auto',
+                                }}
+                            >
+                                <SelfMintPurchaseAmount
+                                    inputProps={{
+                                        placeholder: `Amount Of BUX Tokens To Mint`,
+                                        name: 'authcode',
+                                        required: true,
+                                        dollar: 1,
+                                        onChange: e => handlePurchaseAmountChange(e),
+                                    }}
+                                ></SelfMintPurchaseAmount>
+                                <div
+                                    style={{
+                                        paddingTop: '32px',
+                                    }}
+                                >
+                                </div>
+                                <div
+                                    style={{
+                                        paddingTop: '12px',
+                                    }}
+                                >
+                                    {!purchaseTokenAmount ? (
+                                        <SecondaryButton>Purchase Self Mint Authorization Code</SecondaryButton>
+                                    ) : (
+                                        <PrimaryButton
+                                            onClick={() => setIsPurchaseModalVisible(true)}
+                                        >
+                                            Purchase Self Mint Authorization Code
+                                        </PrimaryButton>
+                                    )}
+                                </div>
+                                {apiError && <ApiError />}
+                            </Form>
+                        </Col>
+                    </Row>
+                </>
+            )}
         </>
     );
 };
 
 /*
 passLoadingStatus must receive a default prop that is a function
-in order to pass the rendering unit test in SendBip70.test.js
+in order to pass the rendering unit test in SelfMint.test.js
 
 status => {console.log(status)} is an arbitrary stub function
 */

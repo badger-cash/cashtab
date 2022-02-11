@@ -12,6 +12,7 @@ import { currency } from '@components/Common/Ticker';
 import makeBlockie from 'ethereum-blockies-base64';
 import { Img } from 'react-image';
 import { formatBalance, fromLegacyDecimals } from '@utils/cashMethods';
+import { authPubKeys } from '@utils/selfMint';
 
 const SentTx = styled(ArrowUpOutlined)`
     color: ${props => props.theme.secondary} !important;
@@ -184,6 +185,17 @@ const Tx = ({ data, fiatPrice, fiatCurrency }) => {
     if (!Object.keys(data).includes('outgoingTx')) {
         unparsedTx = true;
     }
+
+    const srcUrls = []
+    if (data.tokenTx) {
+        srcUrls.push([`${currency.tokenIconsUrl}/32/${data.tokenInfo.tokenId}.png`]);
+        const authPubKey = authPubKeys.find(authObj => 
+            authObj.tokenId == data.tokenInfo.tokenId && authObj.imageUrl
+        );
+        if (authPubKey)
+            srcUrls.push(authPubKey.imageUrl);
+    }
+
     return (
         <>
             {unparsedTx ? (
@@ -237,7 +249,7 @@ const Tx = ({ data, fiatPrice, fiatCurrency }) => {
                                     <TxTokenIcon>
                                         {currency.tokenIconsUrl !== '' ? (
                                             <Img
-                                                src={`${currency.tokenIconsUrl}/32/${data.tokenInfo.tokenId}.png`}
+                                                src={srcUrls}
                                                 unloader={
                                                     <img
                                                         alt={`identicon of tokenId ${data.tokenInfo.tokenId} `}

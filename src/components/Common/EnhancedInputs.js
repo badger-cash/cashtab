@@ -5,11 +5,13 @@ const { TextArea } = Input;
 import {
     ThemedDollarOutlined,
     ThemedWalletOutlined,
+    ThemedLockOutlined
 } from '@components/Common/CustomIcons';
 import styled, { css } from 'styled-components';
 import ScanQRCode from './ScanQRCode';
 import useBCH from '@hooks/useBCH';
 import { currency } from '@components/Common/Ticker.js';
+import { authPubKeys } from '@utils/selfMint';
 
 export const AntdFormCss = css`
     .ant-input-group-addon {
@@ -408,6 +410,59 @@ Bip70AddressSingle.propTypes = {
     onScan: PropTypes.func,
     loadWithCameraOpen: PropTypes.bool,
     inputProps: PropTypes.object,
+};
+
+export const SelfMintAuthCode = ({
+    inputProps,
+    ...otherProps
+}) => {
+    return (
+        <AntdFormWrapper>
+            <Form.Item {...otherProps}>
+                <Input
+                    prefix={<ThemedLockOutlined />}
+                    autoComplete="off"
+                    {...inputProps}
+                />
+            </Form.Item>
+        </AntdFormWrapper>
+    );
+};
+
+SelfMintAuthCode.propTypes = {
+    inputProps: PropTypes.object
+};
+
+export const SelfMintPurchaseAmount = ({
+    inputProps,
+    ...otherProps
+}) => {
+    const logoUrl = authPubKeys[0].imageUrl;
+    return (
+        <AntdFormWrapper>
+            <Form.Item {...otherProps}>
+                <Input
+                    style={{ width: '60%', textAlign: 'left' }}
+                    type="number"
+                    step={0.01}
+                    precision={2}
+                    prefix={
+                        <img
+                            src={logoUrl}
+                            alt=""
+                            width={16}
+                            height={16}
+                        />
+                    }
+                    {...inputProps}
+                />
+            </Form.Item>
+        </AntdFormWrapper>
+    );
+};
+
+SelfMintPurchaseAmount.propTypes = {
+    inputProps: PropTypes.object
 };
 
 export const CurrencySelectDropdown = selectProps => {

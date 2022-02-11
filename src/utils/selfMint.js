@@ -13,7 +13,8 @@ const { i64, u64 } = require('n64');
 export const authPubKeys = [
     {
         tokenId: '744354f928fa48de87182c4024e2c4acbd3c34f42ce9d679f541213688e584b1',
-        pubkey: '038c4fd8cc7dc08ab835a3b3ec3da08070136fe67b20d893db118a491598cbec84'
+        pubkey: '038c4fd8cc7dc08ab835a3b3ec3da08070136fe67b20d893db118a491598cbec84',
+        imageUrl: 'https://bux.digital/assets/img/favicon/favicon-32x32.png'
     }
 ]
 

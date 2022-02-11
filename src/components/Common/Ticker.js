@@ -93,6 +93,9 @@ export const currency = {
         try: { name: 'Turkish Lira', symbol: '₺', slug: 'try' },
         vnd: { name: 'Vietnamese đồng', symbol: 'đ', slug: 'vnd' },
     },
+    selfMintTokens: [
+        '744354f928fa48de87182c4024e2c4acbd3c34f42ce9d679f541213688e584b1'
+    ]
 };
 
 export function getETokenEncodingSubstring() {
