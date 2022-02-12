@@ -83,8 +83,6 @@ into the `REACT_APP_BCASH_API` variable. For example
 REACT_APP_BCASH_API=https://ecash.badger.cash:8332
 ```
 
-Navigate to `localhost:8080` to see the app.
-
 ## Cashtab Roadmap
 
 The following features are under active development:
