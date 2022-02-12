@@ -367,6 +367,7 @@ const SendBCH = ({ passLoadingStatus }) => {
         }
         // Clear the address field
         setFormData(blankFormData);
+        passLoadingStatus(false);
     }
 
     const handleAddressChange = e => {

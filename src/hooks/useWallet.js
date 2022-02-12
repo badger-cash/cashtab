@@ -663,7 +663,7 @@ const useWallet = () => {
         try {
             mnemonicTestOutput = Mnemonic.fromPhrase(mnemonic);
 
-            if (mnemonicTestOutput === 'Valid mnemonic') {
+            if (mnemonicTestOutput.toString() === mnemonic) {
                 return true;
             } else {
                 return false;

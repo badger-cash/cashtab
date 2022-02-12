@@ -77,11 +77,12 @@ const SendToken = ({ tokenId, passLoadingStatus }) => {
     // Load with QR code open if device is mobile and NOT iOS + anything but safari
     const scannerSupported = width < 769 && isMobile && !(isIOS && !isSafari);
 
-    const [formData, setFormData] = useState({
+    const blankFormData = {
         dirty: true,
         value: '',
         address: '',
-    });
+    };
+    const [formData, setFormData] = useState(blankFormData);
 
     // Postage Protocol Check
     const [postageData, setPostageData] = useState(null);
@@ -160,6 +161,9 @@ const SendToken = ({ tokenId, passLoadingStatus }) => {
             }
             errorNotification(e, message, 'Sending eToken');
         }
+        // Clear the address field
+        setFormData(blankFormData);
+        passLoadingStatus(false);
     }
 
     const handleSlpAmountChange = e => {
