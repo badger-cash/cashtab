@@ -24,6 +24,7 @@ export const currency = {
     tokenLogo: tokenLogo,
     tokenPrefixes: ['etoken'],
     tokenIconsUrl: 'https://etoken-icons.s3.us-west-2.amazonaws.com',
+    postageUrl: 'https://pay.badger.cash/postage',
     txHistoryCount: 5,
     hydrateUtxoBatchSize: 20,
     defaultSettings: { fiatCurrency: 'usd' },

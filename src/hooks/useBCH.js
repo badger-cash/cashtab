@@ -25,6 +25,7 @@ import {
     Outpoint,
     Coin, 
     MTX,
+    TX,
     KeyRing,
     Script,
     Opcode,
@@ -51,6 +52,58 @@ export default function useBCH() {
         DOUBLE_SPENDING: 18,
         MAX_UNCONFIRMED_TXS: 64,
     };
+
+    const POSTAGE_URL = `${currency.postageUrl}?currency=${currency.tokenPrefixes[0]}`;
+
+    const getPostage = async (tokenId) => {
+        try {
+            const res = await fetch(POSTAGE_URL);
+            const postageObj = await res.json();
+            const stamp = postageObj.stamps.find(
+                s => s.tokenId === tokenId
+            );
+            if (stamp) {
+                return {
+                    address: postageObj.address,
+                    weight: postageObj.weight,
+                    stamp
+                };
+            }
+        } catch (err) {
+            console.error(err);
+        }
+        return null;
+    };
+
+    const calculatePostage = (
+        inputCount, 
+        tokenRecipientCount, 
+        postageObj
+    ) => {
+        const sendAmountArray = ['1', '1']; // Begin with stamp output and change
+        for (let i = 0; i < tokenRecipientCount; i++) {
+            sendAmountArray.push('1');
+        }
+
+        const sendOpReturn = buildSendOpReturn(
+            Buffer.alloc(32).toString('hex'),
+            sendAmountArray
+        )
+        let byteCount = getByteCount(
+            { P2PKH: inputCount },
+            { P2PKH: sendAmountArray.length }
+        );
+
+        byteCount += 8 + 1 + sendOpReturn.length;
+        // Account for difference in inputs and outputs
+        byteCount += 546 * (sendAmountArray.length - inputCount);
+  
+        let stampsNeeded = Math.ceil(byteCount / postageObj.weight);
+        // console.log('byteCount', byteCount);
+        // console.log('stampsNeeded', stampsNeeded);
+        if (stampsNeeded < 1) stampsNeeded = 1;
+        return postageObj.stamp.rate * stampsNeeded;
+    }
 
     const getBcashRestUrl = () => {
         return process.env.REACT_APP_BCASH_API;
@@ -602,7 +655,12 @@ export default function useBCH() {
 
     const sendToken = async (
         wallet,
-        { tokenId, amount, tokenReceiverAddress },
+        { 
+            tokenId, 
+            amount, 
+            tokenReceiverAddress,
+            postageData
+        },
         feeInSatsPerByte,
         testOnly = false
     ) => {
@@ -612,8 +670,10 @@ export default function useBCH() {
         const REMAINDER_ADDR = wallet.Path1899.cashAddress;
 
         const slpBalancesAndUtxos = wallet.state.slpBalancesAndUtxos
-        // Handle error of user having no BCH
-        if (slpBalancesAndUtxos.nonSlpUtxos.length === 0) {
+        // Handle error of user having no BCH and not using post office
+        if (slpBalancesAndUtxos.nonSlpUtxos.length === 0 &&
+            !postageData
+        ) {
             throw new Error(
                 `You need some ${currency.ticker} to send ${currency.tokenTicker}`,
             );
@@ -652,8 +712,11 @@ export default function useBCH() {
         const tx = new MTX();
 
         let finalTokenAmountSent = new BigNumber(0);
+        // TODO: Handle multiple token outputs
+        let postageAmount = new BigNumber(0)
         let tokenAmountBeingSentToAddress = new BigNumber(amount)
             .times(10 ** tokenInfo.decimals);
+        let totalTokenOutputAmount = tokenAmountBeingSentToAddress;
 
         const tokenCoins = [];
         for (let i = 0; i < tokenUtxos.length; i++) {
@@ -664,13 +727,30 @@ export default function useBCH() {
                 new BigNumber(tokenUtxos[i].slp.value),
             );
 
-            if (tokenAmountBeingSentToAddress.lte(finalTokenAmountSent)) {
+            // Handle postage
+            if (postageData) {
+                const postageBaseAmount = calculatePostage(
+                    tokenCoins.length,
+                    1,
+                    postageData
+                );
+                postageAmount = new BigNumber(postageBaseAmount);
+            }
+
+            totalTokenOutputAmount = tokenAmountBeingSentToAddress
+                .plus(postageAmount);
+
+            if (totalTokenOutputAmount.lte(finalTokenAmountSent)) {
                 break;
             }
         }
 
         const tokenAmountArray = [ tokenAmountBeingSentToAddress.toString() ];
-        const tokenChangeAmount = finalTokenAmountSent.minus(tokenAmountBeingSentToAddress);
+        // Add postage to output array if exists
+        if (postageAmount.gt(0))
+            tokenAmountArray.push(postageAmount.toString());
+        // Add change if any
+        const tokenChangeAmount = finalTokenAmountSent.minus(totalTokenOutputAmount);
         if (tokenChangeAmount.gt(0))
             tokenAmountArray.push(tokenChangeAmount.toString());
 
@@ -682,34 +762,57 @@ export default function useBCH() {
         // Add OP_RETURN as first output.
         tx.addOutput(sendOpReturn, 0);
 
-        // Send dust transaction representing tokens being sent.
+        // Send dust representing tokens being sent.
         const decodedTokenReceiverAddress = cashaddr.decode(tokenReceiverAddress);
         const cleanTokenReceiverAddress = cashaddr.encode(
             'ecash',
             decodedTokenReceiverAddress.type,
             decodedTokenReceiverAddress.hash
-        )
+        );
+        // Add destination output
         tx.addOutput(
             cleanTokenReceiverAddress,
             currency.etokenSats,
         );
 
+        // Add postage output is any
+        if (postageAmount.gt(0)) {
+            const decodedPostageAddress = cashaddr.decode(postageData.address);
+            const cleanPostageAddress = cashaddr.encode(
+                'ecash',
+                decodedPostageAddress.type,
+                decodedPostageAddress.hash
+            );
+            tx.addOutput(
+                cleanPostageAddress,
+                currency.etokenSats,
+            );
+        }
+
         // Send token change if there is any
-        for (let i = 1; i < tokenAmountArray.length; i++) {
+        if (tokenChangeAmount.gt(0)) {
             tx.addOutput(
                 REMAINDER_ADDR,
                 currency.etokenSats,
             );
         }
 
-        await tx.fund([
-                ...tokenCoins,
-                ...nonSlpCoins
-            ], {
-            inputs: tokenCoins.map(coin => Input.fromCoin(coin).prevout),
-            changeAddress: REMAINDER_ADDR,
-            rate: feeInSatsPerByte * 1000 // 1000 sats per kb = 1 sat/b
-        });
+        // If post office is selected
+        if (postageData) {
+            for (let i =0; i < tokenCoins.length; i++) {
+                tx.addCoin(tokenCoins[i]);
+            }
+        } else {
+            // If post office not being used, add native tokens as gas
+            await tx.fund([
+                    ...tokenCoins,
+                    ...nonSlpCoins
+                ], {
+                inputs: tokenCoins.map(coin => Input.fromCoin(coin).prevout),
+                changeAddress: REMAINDER_ADDR,
+                rate: feeInSatsPerByte * 1000 // 1000 sats per kb = 1 sat/b
+            });
+        }
 
         const keyRingArray = [
             KeyRing.fromSecret(wallet.Path245.fundingWif),
@@ -717,19 +820,59 @@ export default function useBCH() {
             KeyRing.fromSecret(wallet.Path1899.fundingWif)
         ];
 
-        tx.sign(keyRingArray);
+        // Set Sighash type
+        const hashTypes = Script.hashType;
+        const sighashType = postageData
+            ? hashTypes.ALL | hashTypes.ANYONECANPAY | hashTypes.SIGHASH_FORKID
+            : hashTypes.ALL | hashTypes.SIGHASH_FORKID;
+
+        // Sign transaction
+        tx.sign(keyRingArray, sighashType);
 
         // output rawhex
-        const hex = tx.toRaw().toString('hex');
+        let txidStr
+        const rawTx = tx.toRaw()
+        const hex = rawTx.toString('hex');
+        console.log('hex', hex);
+        
+        const paymentObj = {
+            merchantData: Buffer.alloc(0),
+            transactions: [rawTx],
+            refundTo:[{
+                script: Script.fromAddress(REMAINDER_ADDR).toRaw(),
+                value: 0
+            }],
+            memo: ''
+        }
+        // Broadcast if postage enabled
+        if (postageData) {
+            let paymentAck;
+            if (!testOnly) {
+                paymentAck = await postPayment(
+                    POSTAGE_URL,
+                    paymentObj,
+                    currency.tokenPrefixes[0]
+                );
+            }
 
-        // Broadcast transaction to the network
-        let broadcast = { success: true };
-        if (!testOnly)
-            broadcast = await broadcastTx(hex);
-        const txidStr = tx.txid().toString('hex')
+            if (paymentAck.payment) {
+                const transactionIds = paymentAck.payment.transactions.map(t =>
+                    TX.fromRaw(t).txid()
+                );
+                txidStr = transactionIds[0];
+                console.log(`${currency.tokenTicker} txid`, txidStr);
+            }
 
-        if (broadcast.success) {
-            console.log(`${currency.tokenTicker} txid`, txidStr);
+        } else {
+            // Broadcast transaction to the network
+            let broadcast = { success: true };
+            if (!testOnly)
+                broadcast = await broadcastTx(hex);
+            txidStr = tx.txid().toString('hex')
+
+            if (broadcast.success) {
+                console.log(`${currency.tokenTicker} txid`, txidStr);
+            }
         }
 
         let link;
@@ -1328,6 +1471,8 @@ export default function useBCH() {
 
     return {
         calcFee,
+        getPostage,
+        calculatePostage,
         getUtxoBcash,
         getUtxosBcash,
         getSlpBalancesAndUtxosBcash,

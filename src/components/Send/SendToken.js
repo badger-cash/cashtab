@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { WalletContext } from '@utils/context';
-import { Form, message, Row, Col, Alert, Descriptions } from 'antd';
+import { 
+    Form, 
+    message, 
+    Row, 
+    Col, 
+    Alert, 
+    Descriptions,
+    Checkbox
+} from 'antd';
+import styled, { css } from 'styled-components';
 import TokenIconAlert from '@components/Common/Alerts.js';
 import PrimaryButton, {
     SecondaryButton,
@@ -24,6 +33,7 @@ import {
     isValidTokenPrefix,
 } from '@components/Common/Ticker.js';
 import { Event } from '@utils/GoogleAnalytics';
+import { authPubKeys } from '@utils/selfMint';
 import { getWalletState } from '@utils/cashMethods';
 import ApiError from '@components/Common/ApiError';
 import {
@@ -31,14 +41,31 @@ import {
     errorNotification,
 } from '@components/Common/Notifications';
 
+3
+
+const StyledCheckbox = styled(Checkbox)`
+  ${props =>
+    props &&
+    css`
+      & .ant-checkbox .ant-checkbox-inner {
+        background-color: white;
+        border-color: blue;
+      }
+    `}
+`;
+
 const SendToken = ({ tokenId, passLoadingStatus }) => {
     const { wallet, apiError } = React.useContext(WalletContext);
     const walletState = getWalletState(wallet);
-    const { tokens } = walletState;
+    const { 
+        tokens, 
+        slpBalancesAndUtxos: {slpUtxos} 
+    } = walletState;
     const token = tokens.find(token => token.tokenId === tokenId);
     const tokenFormattedBalance = token ? new BigNumber(token.balance)
         .div(10 ** token.info.decimals)
         .toString() : '0';
+    const tokenUtxos = slpUtxos.filter(u => u.slp.tokenId === tokenId);
 
     const [tokenStats, setTokenStats] = useState(null);
     const [queryStringText, setQueryStringText] = useState(null);
@@ -56,7 +83,25 @@ const SendToken = ({ tokenId, passLoadingStatus }) => {
         address: '',
     });
 
-    const { getBcashRestUrl, sendToken } = useBCH();
+    // Postage Protocol Check
+    const [postageData, setPostageData] = useState(null);
+    const [usePostage, setUsePostage] = useState(false);
+
+    const { 
+        getBcashRestUrl, 
+        sendToken, 
+        getPostage,
+        calculatePostage } = useBCH();
+
+    useEffect(async () => {
+        passLoadingStatus(true);
+        const postageObj = await getPostage(tokenId);
+        if (postageObj) {
+            setPostageData(postageObj);
+            setUsePostage(true);
+        }
+        passLoadingStatus(false);
+    }, []);
 
     async function submit() {
         setFormData({
@@ -92,6 +137,7 @@ const SendToken = ({ tokenId, passLoadingStatus }) => {
                 tokenId: tokenId,
                 tokenReceiverAddress: cleanAddress,
                 amount: value,
+                postageData: usePostage ? postageData : null
                 },
                 currency.defaultFee
             );
@@ -190,11 +236,24 @@ const SendToken = ({ tokenId, passLoadingStatus }) => {
         }));
     };
 
+    const handlePostageCheck = (e) => {
+        setUsePostage(e.target.checked);
+    }
+
     const onMax = async () => {
         // Clear this error before updating field
         setSendTokenAmountError(false);
+        let postageAmount = 0;
+        if (usePostage) {
+            const postageBaseCost = calculatePostage(
+                tokenUtxos.length,
+                1,
+                postageData
+            );
+            postageAmount = postageBaseCost / 10 ** postageData.stamp.decimals;
+        }
         try {
-            let value = tokenFormattedBalance;
+            let value = tokenFormattedBalance - postageAmount;
 
             setFormData({
                 ...formData,
@@ -215,6 +274,14 @@ const SendToken = ({ tokenId, passLoadingStatus }) => {
 
         passLoadingStatus(false);
     }, [token]);
+
+    // For token image
+    const srcUrls = [`${currency.tokenIconsUrl}/32/${tokenId}.png`]
+    const authPubKey = authPubKeys.find(authObj => 
+        authObj.tokenId == tokenId && authObj.imageUrl
+    );
+    if (authPubKey)
+        srcUrls.push(authPubKey.imageUrl);
 
     return (
         <>
@@ -278,7 +345,7 @@ const SendToken = ({ tokenId, passLoadingStatus }) => {
                                         prefix:
                                             currency.tokenIconsUrl !== '' ? (
                                                 <Img
-                                                    src={`${currency.tokenIconsUrl}/32/${tokenId}.png`}
+                                                    src={srcUrls}
                                                     width={16}
                                                     height={16}
                                                     unloader={
@@ -315,6 +382,12 @@ const SendToken = ({ tokenId, passLoadingStatus }) => {
                                         value: formData.value,
                                     }}
                                 />
+                                {postageData && (
+                                    <StyledCheckbox
+                                        defaultChecked={true}
+                                        onChange={handlePostageCheck}
+                                    >Use Post Office? (pay miner fee in {token.info.ticker})</StyledCheckbox>
+                                )}
                                 <div
                                     style={{
                                         paddingTop: '12px',
