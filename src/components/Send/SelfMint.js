@@ -289,11 +289,14 @@ const SelfMint = ({ passLoadingStatus }) => {
             return this.replace(reg, strWith);
         };
         const searchMask = `mintauth=${authCode}`;
+        let locationStr = window.location.href.replaceAll(searchMask, '');
+        locationStr = locationStr.replace('/?#/', '/#/');
+        locationStr = locationStr.replace('/?&', '/?');
         // Remove mintauth parameter and value from url
         window.history.replaceState(
             null, 
             '', 
-            window.location.href.replaceAll(searchMask, '')
+            locationStr
         );
     } 
 
