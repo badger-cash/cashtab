@@ -10,6 +10,8 @@
 -   Import existing wallets
 -   Create new eTokens
 -   Sign messages using wallet private key
+-   BIP70 and Simple Ledger Payment Protocol Support
+-   Simple Ledger Postage Protocol Support
 
 ## Development
 
@@ -87,7 +89,4 @@ REACT_APP_BCASH_API=https://ecash.badger.cash:8332
 
 The following features are under active development:
 
--   Transaction history
--   BIP70 and Simple Ledger Payment Protocol Support
--   Simple Ledger Postage Protocol Support
 -   Cashtab browser extension
