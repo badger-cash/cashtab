@@ -38,6 +38,7 @@ import {
     secp256k1
 } from 'bcrypto';
 import { read } from 'bufio';
+import { PaymentDetails } from 'b70';
 
 const { 
     SLP,
@@ -144,7 +145,7 @@ export default function useBCH() {
             parsedTx.txid = tx.hash;
             parsedTx.height = tx.height;
             const destinationOutput = tx.outputs.find(output => output.address)
-            const destinationAddress = destinationOutput.address;
+            const destinationAddress = destinationOutput?.address;
 
             // If this tx had too many inputs to be parsed skip it
             // When this occurs, the tx will only have txid and height
@@ -1089,14 +1090,15 @@ export default function useBCH() {
         wallet,
         paymentDetails, // b70.PaymentDetails
         feeInSatsPerByte,
-        testOnly = false
+        testOnly = false,
+        isPreburn = false
     ) => {
         // Get change address from sending utxos
         // fall back to what is stored in wallet
         const REMAINDER_ADDR = wallet.Path1899.cashAddress;
         const refundOutput = new Output({
             address: REMAINDER_ADDR
-        })
+        });
 
         const slpBalancesAndUtxos = wallet.state.slpBalancesAndUtxos;
         let nonSlpCoins = slpBalancesAndUtxos.nonSlpUtxos.map( utxo => 
@@ -1105,6 +1107,8 @@ export default function useBCH() {
 
         // Check to see if this is an SLP/eToken transaction
         const firstOutput = paymentDetails.outputs[0]
+        console.log('paymentDetails', paymentDetails);
+        console.log('paymentDetails.outputs', paymentDetails.outputs);
         const slpScript = SLP.fromRaw(Buffer.from(firstOutput.script));
         const isSlp = slpScript.isValidSlp();
         let postagePaid = false;
@@ -1114,7 +1118,7 @@ export default function useBCH() {
 
             // Throw error if transaction type is not SEND
             const slpType = slpScript.getType();
-            if (slpType !== 'SEND')
+            if (slpType !== 'SEND' && slpType !== 'BURN')
                 throw new Error(`Token ${slpType} transactions not supported`);
 
             // Get required UTXOs
@@ -1136,18 +1140,83 @@ export default function useBCH() {
             if (totalTokenBalance.lt(totalBase))
                 throw new Error ('Insufficient token balance to complete transaction');
 
-            const tokenUtxos = slpBalancesAndUtxos.slpUtxos.filter(
-                utxo => {
-                    if (
-                        utxo && // UTXO is associated with a token.
-                        utxo.slp.tokenId === tokenId && // UTXO matches the token ID.
-                        utxo.slp.type !== 'BATON' // UTXO is not a minting baton.
-                    ) {
-                        return true;
+            const tokenUtxos = [];
+            if (slpType === 'BURN' && !isPreburn) {
+                // Send up preburn split transaction
+                // Postage will be added and it will be cached on server
+                // Use UTXO from response as input UTXO for burn
+
+                // First clone payment details to use with split tx
+                const splitDetails = PaymentDetails.fromOptions(
+                    paymentDetails
+                );
+                // Replace with split tx outputs
+                const sendTotalString = totalBase.toString();
+                const sendOpReturn = buildSendOpReturn(
+                    tokenId,
+                    [sendTotalString]
+                );
+                const opReturnOut = {
+                    script: sendOpReturn.toRaw(),
+                    value: 0
+                };
+                const preburnOut = new Output({
+                    address: REMAINDER_ADDR,
+                    value: 546
+                });
+                splitDetails.outputs = [
+                    opReturnOut, 
+                    {
+                        script: preburnOut.script.toRaw(),
+                        value: preburnOut.value
                     }
-                    return false;
-                },
-            );
+                ]
+                // Send split tx and get Payment object back if successful
+                const splitPayment = await sendBip70(
+                    wallet,
+                    splitDetails,
+                    feeInSatsPerByte,
+                    false,
+                    true
+                );
+                const merchantData = splitPayment.getData('json');
+                if (!merchantData.preburn)
+                    throw new Error('Burn failed: Preburn tx hash not returned from payment server');
+
+                // Use split UTXO as sole input UTXO
+                tokenUtxos.push({
+                    version: 1,
+                    height: -1,
+                    coinbase: false,
+                    script: preburnOut.script.toJSON(),
+                    value: preburnOut.value,
+                    hash: merchantData.preburn,
+                    index: 1,
+                    slp: {
+                        vout: 1,
+                        tokenId,
+                        value: sendTotalString,
+                        type: "SEND"
+                      }
+                });
+
+            } else {
+                // Use available UTXOS in wallet
+                const availableTokenUtxos = slpBalancesAndUtxos.slpUtxos.filter(
+                    utxo => {
+                        if (
+                            utxo && // UTXO is associated with a token.
+                            utxo.slp.tokenId === tokenId && // UTXO matches the token ID.
+                            utxo.slp.type !== 'BATON' // UTXO is not a minting baton.
+                        ) {
+                            return true;
+                        }
+                        return false;
+                    },
+                );
+
+                tokenUtxos.push(...availableTokenUtxos);
+            }
 
             if (tokenUtxos.length === 0) {
                 throw new Error(
@@ -1270,6 +1339,10 @@ export default function useBCH() {
         const txidStr = tx.txid().toString('hex');
 
         if (paymentAck.payment) {
+            // Return the payment object from the ACK if is preburn
+            if (isPreburn)
+                return paymentAck.payment
+
             console.log(`${currency.tokenTicker} txid`, txidStr);
         }
 

@@ -76,7 +76,7 @@ const SendBip70 = ({ passLoadingStatus }) => {
     } = walletState;
     // Modal settings
     const purchaseTokenIds = [
-        '744354f928fa48de87182c4024e2c4acbd3c34f42ce9d679f541213688e584b1'
+        '7e7dacd72dcdb14e00a03dd3aff47f019ed51a6f1f4e4f532ae50692f62bc4e5'
     ];
 
     const blankFormData = {
@@ -113,6 +113,10 @@ const SendBip70 = ({ passLoadingStatus }) => {
     // Show a purchase modal when BUX is requested and insufficient balance
     const [isPurchaseModalVisible, setIsPurchaseModalVisible] = useState(false);
     const [purchaseTokenAmount, setPurchaseTokenAmount] = useState(0);
+
+    // Postage Protocol Check (for BURN)
+    const [postageData, setPostageData] = useState(null);
+    const [usePostage, setUsePostage] = useState(false);
 
     const prefixesArray = [
         ...currency.prefixes,
@@ -157,7 +161,11 @@ const SendBip70 = ({ passLoadingStatus }) => {
 
     const history = useHistory();
 
-    const { getBcashRestUrl, sendBip70 } = useBCH();
+    const { 
+        getBcashRestUrl, 
+        sendBip70,
+        getPostage 
+    } = useBCH();
 
     // If the balance has changed, unlock the UI
     // This is redundant, if backend has refreshed in 1.75s timeout below, UI will already be unlocked
@@ -253,6 +261,9 @@ const SendBip70 = ({ passLoadingStatus }) => {
         if (!paymentDetails)
             return;
         const txInfo = {};
+        // Define postage object in case of BURN
+        let postageObj;
+        // Begin parsing BIP70 Payment Request
         if (paymentDetails.type === 'ecash') {
             const address = Script.fromRaw(
                 Buffer.from(paymentDetails.outputs[0].script)
@@ -264,24 +275,41 @@ const SendBip70 = ({ passLoadingStatus }) => {
             txInfo.value = fromSmallestDenomination(totalSats);
 
         } else if (paymentDetails.type === 'etoken') {
-            const cashAddress = Script.fromRaw(
-                Buffer.from(paymentDetails.outputs[1].script)
-            ).getAddress().toString();
-            const decodedAddress = cashaddr.decode(cashAddress);
-            const tokenAddress = cashaddr.encode(
-            'etoken',
-            decodedAddress.type,
-            decodedAddress.hash
-        )
             const slpScript = SLP.fromRaw(Buffer.from(
                 paymentDetails.outputs[0].script
             ));
-            // Be sure it is valid SEND
-            if (slpScript.isValidSlp() &&
-                slpScript.getType() === 'SEND'
-            ) {
+            // Be sure it is valid SLP transaction
+            if (slpScript.isValidSlp()) {
                 const tokenIdBuf = slpScript.getData(4);
-                const sendRecords = slpScript.getRecords(tokenIdBuf);
+                // Handle SEND and BURN
+                let tokenAddress;
+                let sendRecords;
+                if (slpScript.getType() === 'SEND') {
+                    const cashAddress = Script.fromRaw(
+                        Buffer.from(paymentDetails.outputs[1].script)
+                    ).getAddress().toString();
+                    const decodedAddress = cashaddr.decode(cashAddress);
+                    tokenAddress = cashaddr.encode(
+                        'etoken',
+                        decodedAddress.type,
+                        decodedAddress.hash
+                    )
+                    sendRecords = slpScript.getRecords(tokenIdBuf);
+                } else if (slpScript.getType() === 'BURN') {
+                    tokenAddress = '**BURN**'
+                    sendRecords = [{
+                        value: slpScript.getData(5)
+                    }]
+                    // Get postage info
+                    postageObj = await getPostage(
+                        tokenIdBuf.toString('hex')
+                    );
+                } else {
+                    throw new Error(
+                        `Unsupported SLP transaction type: ${slpScript.getType()}`
+                    );
+                }
+                // Compute total amount to send
                 const totalBase = sendRecords.reduce((total, record) => {
                     return total.add(U64.fromBE(Buffer.from(record.value)));
                 }, U64.fromInt(0));
@@ -299,6 +327,10 @@ const SendBip70 = ({ passLoadingStatus }) => {
         }
         
         setFormData(txInfo);
+        if (postageObj) {
+            setPostageData(postageObj);
+            setUsePostage(true);
+        }
     }
 
     function handleSendXecError(errorObj, ticker) {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { WalletContext } from '@utils/context';
 import { Input, Form, Modal } from 'antd';
@@ -40,6 +40,17 @@ const OnBoarding = () => {
     const [seedInput, openSeedInput] = useState(false);
     const [isValidMnemonic, setIsValidMnemonic] = useState(false);
     const { confirm } = Modal;
+
+    useEffect(() => {
+        // If onboarding via BIP70 invoice, make new wallet immediately
+        const params = (new URL(window.location)).searchParams;
+        if (params.get('uri')) {
+            // Event("Category", "Action", "Label")
+            // Track number of created wallets from onboarding
+            Event('Onboarding.js', 'Create Wallet', 'New');
+            createWallet();
+        }
+    }, []);
 
     async function submit() {
         setFormData({
@@ -87,7 +98,7 @@ const OnBoarding = () => {
             <WelcomeText>
                 Cashtab is an{' '}
                 <WelcomeLink
-                    href="https://github.com/bitcoin-abc/bitcoin-abc"
+                    href="https://github.com/badger-cash/cashtab"
                     target="_blank"
                     rel="noreferrer"
                 >

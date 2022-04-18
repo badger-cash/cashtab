@@ -3,6 +3,7 @@
     "version": "1.2.1",
     "private": true,
     "homepage": "https://wallet.badger.cash/",
+    "license": "MIT license",
     "dependencies": {
         "@ant-design/icons": "^4.3.0",
         "@fortawesome/fontawesome-free": "^5.15.1",

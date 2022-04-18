@@ -95,7 +95,7 @@ export const currency = {
         vnd: { name: 'Vietnamese đồng', symbol: 'đ', slug: 'vnd' },
     },
     selfMintTokens: [
-        '744354f928fa48de87182c4024e2c4acbd3c34f42ce9d679f541213688e584b1'
+        '7e7dacd72dcdb14e00a03dd3aff47f019ed51a6f1f4e4f532ae50692f62bc4e5'
     ]
 };
 
