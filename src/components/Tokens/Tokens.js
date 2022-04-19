@@ -51,10 +51,10 @@ const Tokens = ({ jestBCH, passLoadingStatus }) => {
         <>
             {!balances.totalBalance ? (
                 <>
-                    <ZeroBalanceHeader>
+{/*                     <ZeroBalanceHeader>
                         You need some {currency.ticker} in your wallet to create
                         tokens.
-                    </ZeroBalanceHeader>
+                    </ZeroBalanceHeader> */}
                     <BalanceHeader balance={0} ticker={currency.ticker} />
                 </>
             ) : (
@@ -72,9 +72,9 @@ const Tokens = ({ jestBCH, passLoadingStatus }) => {
                     )}
                 </>
             )}
-            <TokenIconAlert />
+            {/* <TokenIconAlert /> */}
             {apiError && <ApiError />}
-            <CreateTokenForm
+{/*             <CreateTokenForm
                 getBcashRestUrl={getBcashRestUrl}
                 createToken={createToken}
                 disabled={balances.totalBalanceInSatoshis < currency.dustSats}
@@ -103,7 +103,7 @@ const Tokens = ({ jestBCH, passLoadingStatus }) => {
                         : 'USD'}
                     ) to create a token
                 </AlertMsg>
-            )}
+            )} */}
 
             {tokens && tokens.length > 0 ? (
                 <>

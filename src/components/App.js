@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import 'antd/dist/antd.less';
 import { Modal, Spin } from 'antd';
 import { CashLoadingIcon } from '@components/Common/CustomIcons';
@@ -11,13 +11,22 @@ import {
     SettingFilled,
     AppstoreAddOutlined,
 } from '@ant-design/icons';
-import Wallet from '@components/Wallet/Wallet';
-import Tokens from '@components/Tokens/Tokens';
-import Send from '@components/Send/Send';
-import SendToken from '@components/Send/SendToken';
-import SendBip70 from '@components/Send/SendBip70';
-import Configure from '@components/Configure/Configure';
-import NotFound from '@components/NotFound';
+// import Wallet from '@components/Wallet/Wallet';
+const Wallet = lazy(() => import('./Wallet/Wallet'));
+// import Tokens from '@components/Tokens/Tokens';
+const Tokens = lazy(() => import('./Tokens/Tokens'));
+// import Send from '@components/Send/Send';
+const Send = lazy(() => import('./Send/Send'));
+// import SendToken from '@components/Send/SendToken';
+const SendToken = lazy(() => import('./Send/SendToken'));
+// import SendBip70 from '@components/Send/SendBip70';
+const SendBip70 = lazy(() => import('./Send/SendBip70'));
+// import Configure from '@components/Configure/Configure';
+const Configure = lazy(() => import('./Configure/Configure'));
+// import SelfMint from './Send/SelfMint';
+const SelfMint = lazy(() => import('./Send/SelfMint'));
+// import NotFound from '@components/NotFound';
+const NotFound = lazy(() => import('./NotFound'));
 import CashTab from '@assets/cashtab_xec.png';
 import './App.css';
 import { WalletContext } from '@utils/context';
@@ -37,7 +46,6 @@ import { checkForTokenById } from '@utils/tokenMethods.js';
 import { currency } from './Common/Ticker';
 // Biometric security import not used in extension/src/components/App.js
 import ProtectableComponentWrapper from './Authentication/ProtectableComponentWrapper';
-import SelfMint from './Send/SelfMint';
 
 const GlobalStyle = createGlobalStyle`    
     .ant-modal-wrap > div > div.ant-modal-content > div > div > div.ant-modal-confirm-btns > button, .ant-modal > button, .ant-modal-confirm-btns > button, .ant-modal-footer > button, #cropControlsConfirm {
@@ -313,57 +321,59 @@ const App = () => {
                             </HeaderCtn>
                             <ProtectableComponentWrapper>
                                 <WalletLabel name={wallet.name}></WalletLabel>
-                                <Switch>
-                                    <Route path="/wallet">
-                                        <Wallet />
-                                    </Route>
-                                    <Route path="/tokens">
-                                        <Tokens
-                                            passLoadingStatus={
-                                                setLoadingUtxosAfterSend
-                                            }
-                                        />
-                                    </Route>
-                                    <Route path="/send">
-                                        <Send
-                                            passLoadingStatus={
-                                                setLoadingUtxosAfterSend
-                                            }
-                                        />
-                                    </Route>
-                                    <Route
-                                        path="/send-token/:tokenId"
-                                        render={props => (
-                                            <SendToken
-                                                tokenId={
-                                                    props.match.params.tokenId
-                                                }
+                                <Suspense fallback={<h1>Loading...</h1>}>
+                                    <Switch>
+                                        <Route path="/wallet">
+                                            <Wallet />
+                                        </Route>
+                                        <Route path="/tokens">
+                                            <Tokens
                                                 passLoadingStatus={
                                                     setLoadingUtxosAfterSend
                                                 }
                                             />
-                                        )}
-                                    />
-                                    <Route path="/sendBip70">
-                                        <SendBip70
-                                            passLoadingStatus={
-                                                setLoadingUtxosAfterSend
-                                            }
+                                        </Route>
+                                        <Route path="/send">
+                                            <Send
+                                                passLoadingStatus={
+                                                    setLoadingUtxosAfterSend
+                                                }
+                                            />
+                                        </Route>
+                                        <Route
+                                            path="/send-token/:tokenId"
+                                            render={props => (
+                                                <SendToken
+                                                    tokenId={
+                                                        props.match.params.tokenId
+                                                    }
+                                                    passLoadingStatus={
+                                                        setLoadingUtxosAfterSend
+                                                    }
+                                                />
+                                            )}
                                         />
-                                    </Route>
-                                    <Route path="/selfMint">
-                                        <SelfMint
-                                            passLoadingStatus={
-                                                setLoadingUtxosAfterSend
-                                            }
-                                        />
-                                    </Route>
-                                    <Route path="/configure">
-                                        <Configure />
-                                    </Route>
-                                    <Redirect exact from="/" to="/wallet" />
-                                    <Route component={NotFound} />
-                                </Switch>
+                                        <Route path="/sendBip70">
+                                            <SendBip70
+                                                passLoadingStatus={
+                                                    setLoadingUtxosAfterSend
+                                                }
+                                            />
+                                        </Route>
+                                        <Route path="/selfMint">
+                                            <SelfMint
+                                                passLoadingStatus={
+                                                    setLoadingUtxosAfterSend
+                                                }
+                                            />
+                                        </Route>
+                                        <Route path="/configure">
+                                            <Configure />
+                                        </Route>
+                                        <Redirect exact from="/" to="/wallet" />
+                                        <Route component={NotFound} />
+                                    </Switch>
+                                </Suspense>
                             </ProtectableComponentWrapper>
                         </WalletCtn>
                         {wallet ? (
