@@ -1,7 +1,7 @@
 import React, { useState, Suspense, lazy } from 'react';
 import 'antd/dist/antd.less';
 import { Modal, Spin } from 'antd';
-import { CashLoadingIcon } from '@components/Common/CustomIcons';
+import { CashLoadingIcon, LoadingBlock } from '@components/Common/CustomIcons';
 import '../index.css';
 import styled, { ThemeProvider, createGlobalStyle } from 'styled-components';
 import { theme } from '@assets/styles/theme';
@@ -254,7 +254,8 @@ const App = () => {
               '50d8292c6255cda7afc6c8566fed3cf42a2794e9619740fe8f4c95431271410e',
           )
         : false;
-
+    
+    const codeSplitLoader = <LoadingBlock>{CashLoadingIcon}</LoadingBlock>;
 /*     useEffect(() => {
         // If URL is not as specified in currency.appURL in Ticker.js, show a popup
         const currentUrl = window.location.hostname;
@@ -321,7 +322,7 @@ const App = () => {
                             </HeaderCtn>
                             <ProtectableComponentWrapper>
                                 <WalletLabel name={wallet.name}></WalletLabel>
-                                <Suspense fallback={<h1>Loading...</h1>}>
+                                <Suspense fallback={codeSplitLoader}>
                                     <Switch>
                                         <Route path="/wallet">
                                             <Wallet />
