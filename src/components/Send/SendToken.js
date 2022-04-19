@@ -297,7 +297,7 @@ const SendToken = ({ tokenId, passLoadingStatus }) => {
                         balance={tokenFormattedBalance}
                         ticker={token.info.ticker}
                     />
-                    <TokenIconAlert />
+                    {/* <TokenIconAlert /> */}
                     <Row type="flex">
                         <Col span={24}>
                             <Form

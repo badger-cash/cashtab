@@ -20,7 +20,7 @@ const StyledSpacer = styled.div`
     height: 1px;
     width: 100%;
     background-color: ${props => props.theme.wallet.borders.color};
-    margin: 60px 0 50px;
+    margin: 50px 0 50px;
 `;
 
 const Tokens = ({ jestBCH, passLoadingStatus }) => {
@@ -104,7 +104,7 @@ const Tokens = ({ jestBCH, passLoadingStatus }) => {
                     ) to create a token
                 </AlertMsg>
             )} */}
-
+            <StyledSpacer />
             {tokens && tokens.length > 0 ? (
                 <>
                     <TokenList tokens={tokens} />
