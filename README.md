@@ -8,10 +8,11 @@
 
 -   Send & Receive XEC and eTokens
 -   Import existing wallets
--   Create new eTokens
 -   Sign messages using wallet private key
--   BIP70 and Simple Ledger Payment Protocol Support
--   Simple Ledger Postage Protocol Support
+-   [BIP70](https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki) and [Simple Ledger Payment Protocol](https://github.com/simpleledger/slp-specifications/blob/master/slp-payment-protocol.md) Support
+-   [Simple Ledger Postage Protocol](https://github.com/simpleledger/slp-specifications/blob/master/slp-postage-protocol.md) Support
+-   [Simple Ledger Self Mint Token](https://github.com/badger-cash/slp-self-mint-protocol/blob/master/selfmint-specification.md) Support
+-   [SLP Token Type 1 Burn](https://github.com/badger-cash/slp-self-mint-protocol/blob/master/token-type1-burn.md) Support
 
 ## Development
 
