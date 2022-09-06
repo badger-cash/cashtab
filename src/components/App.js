@@ -19,6 +19,8 @@ const Tokens = lazy(() => import('./Tokens/Tokens'));
 const Send = lazy(() => import('./Send/Send'));
 // import SendToken from '@components/Send/SendToken';
 const SendToken = lazy(() => import('./Send/SendToken'));
+// import Checkout from '@components/Send/Checkout';
+const Checkout = lazy(() => import('./Send/Checkout'));
 // import SendBip70 from '@components/Send/SendBip70';
 const SendBip70 = lazy(() => import('./Send/SendBip70'));
 // import Configure from '@components/Configure/Configure';
@@ -354,6 +356,13 @@ const App = () => {
                                                 />
                                             )}
                                         />
+                                        <Route path="/checkout">
+                                            <Checkout
+                                                passLoadingStatus={
+                                                    setLoadingUtxosAfterSend
+                                                }
+                                            />
+                                        </Route>
                                         <Route path="/sendBip70">
                                             <SendBip70
                                                 passLoadingStatus={

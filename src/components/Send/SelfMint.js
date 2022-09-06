@@ -19,8 +19,7 @@ import PrimaryButton, {
 } from '@components/Common/PrimaryButton';
 import useBCH from '@hooks/useBCH';
 import {
-    sendXecNotification,
-    sendTokenNotification,
+    selfMintTokenNotification,
     errorNotification,
 } from '@components/Common/Notifications';
 import {
@@ -332,7 +331,7 @@ const SelfMint = ({ passLoadingStatus }) => {
                 false // testOnly
             );
 
-            sendXecNotification(link);
+            selfMintTokenNotification();
             // Sleep for 10 seconds and then 
             await sleep(8000);
             // Manually disable loading

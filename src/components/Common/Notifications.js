@@ -40,6 +40,19 @@ const createTokenNotification = link => {
     });
 };
 
+const selfMintTokenNotification = () => {
+    notification.success({
+        message: 'Success',
+        description: (
+            <Paragraph>
+                Tokens successfully minted! Please wait while balance is refreshed.
+            </Paragraph>
+        ),
+        icon: <TokenReceivedNotificationIcon />,
+        style: { width: '100%' },
+    });
+};
+
 const tokenIconSubmitSuccess = () => {
     notification.success({
         message: 'Success',
@@ -149,6 +162,7 @@ export {
     createTokenNotification,
     tokenIconSubmitSuccess,
     sendTokenNotification,
+    selfMintTokenNotification,
     xecReceivedNotification,
     eTokenReceivedNotification,
     errorNotification,

@@ -4,41 +4,32 @@ import {
     useHistory
 } from 'react-router-dom';
 import PropTypes from 'prop-types';
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { WalletContext } from '@utils/context';
-import {
-    SendBip70Input,
-    Bip70AddressSingle,
-} from '@components/Common/EnhancedInputs';
 import {
     Form,
     Modal,
     Button,
+    Spin
 } from 'antd';
+import { CashLoadingIcon } from '@components/Common/CustomIcons';
 import { Row, Col } from 'antd';
-import PrimaryButton, {
-    SecondaryButton,
-} from '@components/Common/PrimaryButton';
+import PrimaryButton from '@components/Common/PrimaryButton';
 import useBCH from '@hooks/useBCH';
 import {
     sendXecNotification,
     sendTokenNotification,
+    selfMintTokenNotification,
     errorNotification,
 } from '@components/Common/Notifications';
 import {
     currency
 } from '@components/Common/Ticker.js';
 import { Event } from '@utils/GoogleAnalytics';
-import {
-    fiatToCrypto,
-    shouldRejectAmountInput,
-} from '@utils/validation';
+import { fiatToCrypto } from '@utils/validation';
 import BalanceHeader from '@components/Common/BalanceHeader';
 import BalanceHeaderFiat from '@components/Common/BalanceHeaderFiat';
-import {
-    ZeroBalanceHeader,
-    ConvertAmount,
-    AlertMsg,
-} from '@components/Common/Atoms';
+import { ZeroBalanceHeader } from '@components/Common/Atoms';
 import { 
     getWalletState,
     fromSmallestDenomination
@@ -58,9 +49,29 @@ import { U64 } from 'n64';
 
 const MemoLabel = styled.div`
     color: purple;
+    font-weight: bold;
 `;
 
-const SendBip70 = ({ passLoadingStatus }) => {
+const TermsLink = styled.a`
+    text-decoration: underline;
+    color: ${props => props.theme.primary};
+    :visited {
+        text-decoration: underline;
+        color: ${props => props.theme.primary};
+    }
+    :hover {
+        color: ${props => props.theme.brandSecondary};
+    }
+`;
+
+const StyledSpacer = styled.div`
+    height: 1px;
+    width: 100%;
+    background-color: ${props => props.theme.wallet.borders.color};
+    margin: 20px 0 50px;
+`;
+
+const Checkout = ({ passLoadingStatus }) => {
     // use balance parameters from wallet.state object and not legacy balances parameter from walletState, if user has migrated wallet
     // this handles edge case of user with old wallet who has not opened latest Cashtab version yet
 
@@ -99,7 +110,7 @@ const SendBip70 = ({ passLoadingStatus }) => {
             tokenFormattedBalance = '0';
         }
     }
-    const [queryStringText, setQueryStringText] = useState(null);
+
     const [sendBchAddressError, setSendBchAddressError] = useState(false);
     const [sendBchAmountError, setSendBchAmountError] = useState(false);
     const [selectedCurrency, setSelectedCurrency] = useState(currency.ticker);
@@ -110,8 +121,7 @@ const SendBip70 = ({ passLoadingStatus }) => {
     // Show a confirmation modal on transactions created by populating form from web page button
     const [isModalVisible, setIsModalVisible] = useState(false);
 
-    // Show a purchase modal when BUX is requested and insufficient balance
-    const [isPurchaseModalVisible, setIsPurchaseModalVisible] = useState(false);
+    const [tokensMinted, setTokensMinted] = useState(false);
     const [purchaseTokenAmount, setPurchaseTokenAmount] = useState(0);
 
     // Postage Protocol Check (for BURN)
@@ -136,25 +146,6 @@ const SendBip70 = ({ passLoadingStatus }) => {
         setIsModalVisible(false);
     };
 
-    const handlePurchaseOk = () => {
-        setIsPurchaseModalVisible(false);
-        // Remove anchor hash from url
-        const callbackUrl = window.location.href.replace(
-            window.location.hash,
-            ''
-        );
-        return window.location.assign(
-            `https://bux.digital/?cbxamount=${purchaseTokenAmount.toString()}`
-            + `&cbxaddress=${wallet.Path1899.slpAddress}`
-            + `&cbxcallback=${encodeURIComponent(callbackUrl)}`
-            +`#payment`
-        )
-    };
-
-    const handlePurchaseCancel = () => {
-        setIsPurchaseModalVisible(false);
-    };
-
     const sleep = (ms) => {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
@@ -164,6 +155,7 @@ const SendBip70 = ({ passLoadingStatus }) => {
     const { 
         getBcashRestUrl, 
         sendBip70,
+        sendSelfMint,
         getPostage 
     } = useBCH();
 
@@ -179,12 +171,9 @@ const SendBip70 = ({ passLoadingStatus }) => {
             const difference = (Number(tokenFormattedBalance) - Number(formData.value))
                 .toFixed(formData.token.decimals);
             if (purchaseTokenIds.includes(formData.token?.tokenId)) {
-                if (difference < 0 && formData.address != '**BURN**') 
-                    return history.push('/checkout');
-                // // Set purchase modal visible and set amount to purchase
-                // setIsPurchaseModalVisible(difference < 0);
-                // const purchaseAmount = difference < 0 ? Math.abs(difference) : 0
-                // setPurchaseTokenAmount(purchaseAmount);
+                // Set amount to purchase
+                const purchaseAmount = difference < 0 ? Math.abs(difference) : 0
+                setPurchaseTokenAmount(purchaseAmount);
             }
         }
     }, [tokenFormattedBalance]);
@@ -287,16 +276,6 @@ const SendBip70 = ({ passLoadingStatus }) => {
                 let tokenAddress;
                 let sendRecords;
                 if (slpScript.getType() === 'SEND') {
-                    // Check to see if should be forwarded to checkout/purchase
-                    if (formData.token) {
-                        const difference = (Number(tokenFormattedBalance) - Number(formData.value))
-                            .toFixed(formData.token.decimals);
-                        if (purchaseTokenIds.includes(formData.token?.tokenId)) {
-                            if (difference < 0) 
-                                return history.push('/checkout');
-                        }
-                    }
-                    // Fill in values
                     const cashAddress = Script.fromRaw(
                         Buffer.from(paymentDetails.outputs[1].script)
                     ).getAddress().toString();
@@ -424,31 +403,49 @@ const SendBip70 = ({ passLoadingStatus }) => {
         passLoadingStatus(false);
     }
 
-    const handleSelectedCurrencyChange = e => {
-        setSelectedCurrency(e);
-        // Clear input field to prevent accidentally sending 1 BCH instead of 1 USD
-        setFormData(p => ({
-            ...p,
-            value: '',
-        }));
-    };
+    const doSelfMint = async (authCodeB64) => {
+        setFormData({
+            ...formData,
+            dirty: false,
+        });
 
-    const handleBchAmountChange = e => {
-        const { value, name } = e.target;
-        let bchValue = value;
-        const error = shouldRejectAmountInput(
-            bchValue,
-            selectedCurrency,
-            fiatPrice,
-            balances.totalBalance,
+        // ensure prInfo exists
+        if (!authCodeB64) {
+            return;
+        }
+
+        // TODO: Handle many different tokens
+        const tokenId = Buffer.from(
+            formData.token.tokenId,
+            'hex'
         );
-        setSendBchAmountError(error);
 
-        setFormData(p => ({
-            ...p,
-            [name]: value,
-        }));
-    };
+        // Event("Category", "Action", "Label")
+        // Track number of XEC BIP70 transactions
+        Event('SelfMint.js', 'SelfMint', authCodeB64);
+
+        passLoadingStatus(true);
+
+        try {
+            // Send transaction
+            await sendSelfMint(
+                wallet,
+                tokenId,
+                authCodeB64,
+                false // testOnly
+            );
+
+            selfMintTokenNotification();
+            setTokensMinted(true);
+            // Sleep for 10 seconds and then 
+            await sleep(10000);
+            // Manually disable loading
+            passLoadingStatus(false);
+            return;
+        } catch (e) {
+            handleSendXecError(e, authCodeB64);
+        }
+    }
 
     const checkSufficientFunds = () => {
         if (formData.token) {
@@ -495,6 +492,101 @@ const SendBip70 = ({ passLoadingStatus }) => {
         }
     }
 
+    const feeAmount = (.50 + (purchaseTokenAmount * .06)).toFixed(2); // Add 50 cent fixed fee
+    const totalAmount = (Number(purchaseTokenAmount) + Number(feeAmount)).toFixed(2);
+
+    const PayPalSection = () => {
+        return (
+            <>
+                <PayPalScriptProvider options={{ "client-id": "ATPjCoOQT8kYOAzUUwehyvrA7D4nyvkfyZgmSMiR5_YOe9G2UomchTEQJzdzj2QGiUXOxfYCpK17izz7" }}>
+                    <PayPalButtons 
+                        style={{ layout: "vertical" }}
+                        forceReRender={[purchaseTokenAmount]}
+                        createOrder={(data, actions) => {
+                            console.log("purchaseAmount", purchaseTokenAmount);
+                            return actions.order
+                                .create({
+                                    purchase_units: [
+                                        {
+                                            reference_id: `${wallet.Path1899.slpAddress}-${purchaseTokenAmount}`,
+                                            description: `Self-Mint Auth Code (${purchaseTokenAmount} BUX Tokens)`,
+                            
+                                            custom_id: location.href,
+                                            amount: {
+                                                currency_code: "USD",
+                                                value: totalAmount.toString(),
+                                                breakdown: {
+                                                    item_total: {
+                                                        currency_code: "USD",
+                                                        value: totalAmount.toString()
+                                                    }
+                                                }
+                                            },
+                                            items: [
+                                                {
+                                                    name: "Auth Code",
+                                                    description: `Self-Mint Auth Code (${purchaseTokenAmount} BUX Tokens)`,
+                                                    unit_amount: {
+                                                        currency_code: "USD",
+                                                        value: totalAmount.toString()
+                                                    },
+                                                    quantity: "1"
+                                                }
+                                            ],
+                            
+                                        }
+                                    ],
+                                    application_context: {
+                                        shipping_preference: 'NO_SHIPPING'
+                                    }
+                                })
+                                .then((orderId) => {
+                                    // Your code here after create the order
+                                    return orderId;
+                                });
+                        }}
+                        onApprove={(data, actions) => {
+                            return actions.order.capture().then(function (details) {
+                                // Your code here after capture the order
+                                passLoadingStatus(true);
+                                // Call your server to save the transaction
+                                fetch(`https://bux.digital/v1/success?paymentId=${details.id}`, {
+                                    method: 'get',
+                                    headers: {
+                                        'content-type': 'application/json'
+                                    }
+                                })
+                                .then(response => {
+                                    return response.json();
+                                })
+                                .then(data => {
+                                    doSelfMint(data.authcode);
+                                });
+                            });
+                        }}
+                        onError={(err) => {
+                            console.log(err);
+                            const { type } = prInfoFromUrl;
+                            const ticker = type == 'etoken' ?
+                                currency.tokenTicker : currency.ticker;
+                            handleSendXecError(err, ticker);
+                        }}
+                    />
+                </PayPalScriptProvider>
+                <StyledSpacer />[
+                    <TermsLink
+                        type="link"
+                        href="https://bux.digital/tos.html"
+                        target="_blank"
+                        rel="noreferrer"
+                    >
+                        Terms of Service
+                    </TermsLink>
+                ]
+            </>
+        );
+    }
+
     const priceApiError = fiatPrice === null && selectedCurrency !== 'XEC';
 
     const displayBalance = tokenFormattedBalance || balances.totalBalance;
@@ -513,31 +605,33 @@ const SendBip70 = ({ passLoadingStatus }) => {
                     {displayTicker} to settle this payment request?
                 </p>
             </Modal>
-            <Modal
-                title={`Purchase ${displayTicker}`}
-                visible={isPurchaseModalVisible}
-                onOk={handlePurchaseOk}
-                onCancel={handlePurchaseCancel}
-            >
-                <p>
-                    You have insufficient funds. Do you want to purchase {' '}
-                    <strong>{purchaseTokenAmount}{' '}{displayTicker}{' '}</strong>
-                    in order to be able to settle this payment request?
-                </p>
-            </Modal>
-            {!checkSufficientFunds() ? (
-                <ZeroBalanceHeader>
-                    You currently have {displayBalance} {displayTicker}
-                    <br />
-                    Deposit some funds to use this feature
-                </ZeroBalanceHeader>
+            {!checkSufficientFunds() && !tokensMinted? (
+                <>
+                    <ZeroBalanceHeader>
+                        You have insufficient funds in this wallet
+                        <br /><br />
+                        Purchase an authorization code for {' '}
+                        <strong>{purchaseTokenAmount}{' '}{displayTicker}{' '}</strong>
+                        <br />
+                        to settle this payment request
+                    </ZeroBalanceHeader>
+                    <Button
+                        type="text"
+                        block
+                    >
+                        <MemoLabel>
+                            {`$${purchaseTokenAmount} (+ $${feeAmount} processing fee)`}
+                        </MemoLabel>
+                    </Button>
+                </>
             ) : (
                 <>
                     <BalanceHeader
-                        balance={displayBalance}
+                        /* balance={displayBalance} */
+                        balance={formData.value}
                         ticker={displayTicker}
                     />
-                    {fiatPrice !== null && (
+                    {fiatPrice !== null && false && (
                         <BalanceHeaderFiat
                             balance={balances.totalBalance}
                             settings={cashtabSettings}
@@ -556,80 +650,14 @@ const SendBip70 = ({ passLoadingStatus }) => {
                     >
                         {prInfoFromUrl 
                             && prInfoFromUrl.paymentDetails && (
-                            <>
-                                <Button
-                                    type="text"
-                                    block
-                                >
-                                    <MemoLabel>
-                                        {prInfoFromUrl.paymentDetails.memo}
-                                    </MemoLabel>
-                                </Button>
-                                <Bip70AddressSingle
-                                    validateStatus={
-                                        sendBchAddressError ? 'error' : ''
-                                    }
-                                    help={
-                                        sendBchAddressError
-                                            ? sendBchAddressError
-                                            : ''
-                                    }
-                                    inputProps={{
-                                        placeholder: `${currency.ticker} Address`,
-                                        name: 'address',
-                                        required: true,
-                                        value: formData.address,
-                                    }}
-                                ></Bip70AddressSingle>
-                                <SendBip70Input
-                                    activeTokenCode={
-                                        formData &&
-                                        formData.token
-                                            ? formData.token.ticker
-                                            : currency.ticker
-                                    }
-                                    validateStatus={
-                                        sendBchAmountError ? 'error' : ''
-                                    }
-                                    help={
-                                        sendBchAmountError
-                                            ? sendBchAmountError
-                                            : ''
-                                    }
-                                    inputProps={{
-                                        name: 'value',
-                                        dollar:
-                                            selectedCurrency === 'USD' ? 1 : 0,
-                                        placeholder: 'Amount',
-                                        onChange: e => handleBchAmountChange(e),
-                                        required: true,
-                                        value: formData.value,
-                                        token: formData.token
-                                    }}
-                                    selectProps={{
-                                        disabled: queryStringText !== null,
-                                        onChange: e =>
-                                            handleSelectedCurrencyChange(e),
-                                    }}
-                                ></SendBip70Input>
-                                {!formData.token && priceApiError && (
-
-                                    <AlertMsg>
-                                        Error fetching fiat price. Setting send
-                                        by{' '}
-                                        {currency.fiatCurrencies[
-                                            cashtabSettings.fiatCurrency
-                                        ].slug.toUpperCase()}{' '}
-                                        disabled
-                                    </AlertMsg>
-                                )}
-                                {!formData.token && (
-                                    <ConvertAmount>
-                                        {fiatPriceString !== '' && '='}{' '}
-                                        {fiatPriceString}
-                                    </ConvertAmount>
-                                )}
-                            </>
+                            <Button
+                                type="text"
+                                block
+                            >
+                                <MemoLabel>
+                                    {prInfoFromUrl.paymentDetails.memo}
+                                </MemoLabel>
+                            </Button>
                         )}
                         <div
                             style={{
@@ -647,7 +675,16 @@ const SendBip70 = ({ passLoadingStatus }) => {
                             sendBchAmountError ||
                             sendBchAddressError ||
                             !prInfoFromUrl ? (
-                                <SecondaryButton>Send</SecondaryButton>
+                                <>
+                                    {!tokensMinted ? (
+                                        <PayPalSection />
+                                    ) : (
+                                        <Spin
+                                            spinning={true}
+                                            indicator={CashLoadingIcon}
+                                        ></Spin>
+                                    )}
+                                </>
                             ) : (
                                 <PrimaryButton
                                     onClick={() => showModal()}
@@ -671,14 +708,14 @@ in order to pass the rendering unit test in SendBip70.test.js
 status => {console.log(status)} is an arbitrary stub function
 */
 
-SendBip70.defaultProps = {
+Checkout.defaultProps = {
     passLoadingStatus: status => {
         console.log(status);
     },
 };
 
-SendBip70.propTypes = {
+Checkout.propTypes = {
     passLoadingStatus: PropTypes.func,
 };
 
-export default SendBip70;
+export default Checkout;
