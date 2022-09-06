@@ -436,12 +436,12 @@ const Checkout = ({ passLoadingStatus }) => {
             );
 
             selfMintTokenNotification();
-            setTokensMinted(true);
+            // setTokensMinted(true);
             // Sleep for 10 seconds and then 
-            await sleep(10000);
+            // await sleep(10000);
             // Manually disable loading
-            passLoadingStatus(false);
-            return;
+            // passLoadingStatus(false);
+            return window.location.reload();
         } catch (e) {
             handleSendXecError(e, authCodeB64);
         }
