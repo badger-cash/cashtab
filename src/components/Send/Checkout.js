@@ -79,7 +79,13 @@ const Checkout = ({ passLoadingStatus }) => {
     // Else set it as blank
     const ContextValue = React.useContext(WalletContext);
     const location = useLocation();
-    const { wallet, fiatPrice, apiError, cashtabSettings } = ContextValue;
+    const { 
+        wallet,
+        forceWalletUpdate,
+        fiatPrice, 
+        apiError, 
+        cashtabSettings 
+    } = ContextValue;
     const walletState = getWalletState(wallet);
     const { 
         tokens,
@@ -436,12 +442,13 @@ const Checkout = ({ passLoadingStatus }) => {
             );
 
             selfMintTokenNotification();
-            // setTokensMinted(true);
+            setTokensMinted(true);
             // Sleep for 10 seconds and then 
             // await sleep(10000);
             // Manually disable loading
-            // passLoadingStatus(false);
-            return window.location.reload();
+            passLoadingStatus(false);
+            return forceWalletUpdate();
+            // return window.location.reload();
         } catch (e) {
             handleSendXecError(e, authCodeB64);
         }

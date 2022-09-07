@@ -99,8 +99,9 @@ const useWallet = () => {
     };
 
     const update = async ({ wallet }) => {
-        //console.log(`tick()`);
-        //console.time("update");
+        // const ms = new Date().getTime();
+        // console.log(`update.${ms}`);
+        // console.time(`update.${ms}`);
         try {
             if (!wallet) {
                 return;
@@ -121,7 +122,8 @@ const useWallet = () => {
                 // limit error with an unchanged utxo set
                 setApiError(false);
                 // then wallet.state has not changed and does not need to be updated
-                //console.timeEnd("update");
+                // console.log("wallet state not updated")
+                // console.timeEnd(`update.${ms}`);
                 return;
             }
 
@@ -167,9 +169,10 @@ const useWallet = () => {
             console.log(error);
             // Set this in state so that transactions are disabled until the issue is resolved
             setApiError(true);
-            //console.timeEnd("update");
+            // console.timeEnd(`update.${ms}`);
         }
-        //console.timeEnd("update");
+        // console.log("wallet state updated")
+        // console.timeEnd(`update.${ms}`);
     };
 
     const getActiveWalletFromLocalForage = async () => {
@@ -892,6 +895,12 @@ const useWallet = () => {
         }
     }
 
+    const forceWalletUpdate = async () => {
+        // console.log("forcing wallet update");
+        const wallet = await getWallet();
+        return await update({ wallet });
+    }
+
     // Update wallet every 10s
     useAsyncTimeout(async () => {
         const wallet = await getWallet();
@@ -951,7 +960,7 @@ const useWallet = () => {
         cashtabSettings,
         changeCashtabSettings,
         getActiveWalletFromLocalForage,
-        getWallet,
+        forceWalletUpdate,
         validateMnemonic,
         getWalletDetails,
         getSavedWallets,
