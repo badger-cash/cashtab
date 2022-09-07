@@ -33,9 +33,7 @@ import {
     script
 } from 'bcash';
 import {
-    Hash160,
-    SHA256,
-    secp256k1
+    Hash160
 } from 'bcrypto';
 import { read } from 'bufio';
 import { PaymentDetails } from 'b70';

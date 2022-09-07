@@ -11,7 +11,6 @@ import {
     Checkbox
 } from 'antd';
 import styled, { css } from 'styled-components';
-import TokenIconAlert from '@components/Common/Alerts.js';
 import PrimaryButton, {
     SecondaryButton,
 } from '@components/Common/PrimaryButton';

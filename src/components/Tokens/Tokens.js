@@ -2,16 +2,12 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { useHistory } from 'react-router-dom';
 import { WalletContext } from '@utils/context';
-import { fromSmallestDenomination, getWalletState } from '@utils/cashMethods';
-import TokenIconAlert from '@components/Common/Alerts.js';
-
-import CreateTokenForm from '@components/Tokens/CreateTokenForm';
+import { getWalletState } from '@utils/cashMethods';
 import { currency } from '@components/Common/Ticker.js';
 import TokenList from '@components/Wallet/TokenList';
 import useBCH from '@hooks/useBCH';
 import BalanceHeader from '@components/Common/BalanceHeader';
 import BalanceHeaderFiat from '@components/Common/BalanceHeaderFiat';
-import { ZeroBalanceHeader, AlertMsg } from '@components/Common/Atoms';
 import ApiError from '@components/Common/ApiError';
 import styled from 'styled-components';
 import PrimaryButton from '@components/Common/PrimaryButton';

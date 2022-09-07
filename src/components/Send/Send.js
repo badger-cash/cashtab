@@ -12,8 +12,7 @@ import {
     DestinationAddressMulti,
 } from '@components/Common/EnhancedInputs';
 import {
-    StyledCollapse,
-    AdvancedCollapse,
+    AdvancedCollapse
 } from '@components/Common/StyledCollapse';
 import {
     Form,
@@ -23,12 +22,10 @@ import {
     Collapse,
     Input,
     Button,
-    notification,
 } from 'antd';
 const { Panel } = Collapse;
 const { TextArea } = Input;
 import { Row, Col } from 'antd';
-import Paragraph from 'antd/lib/typography/Paragraph';
 import PrimaryButton, {
     SecondaryButton,
     SmartButton,

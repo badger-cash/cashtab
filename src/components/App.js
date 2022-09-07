@@ -1,6 +1,6 @@
 import React, { useState, Suspense, lazy } from 'react';
 import 'antd/dist/antd.less';
-import { Modal, Spin } from 'antd';
+import { Spin } from 'antd';
 import { CashLoadingIcon, LoadingBlock } from '@components/Common/CustomIcons';
 import '../index.css';
 import styled, { ThemeProvider, createGlobalStyle } from 'styled-components';
@@ -45,7 +45,6 @@ import {
 import TabCash from '@assets/tabcash.png';
 import ABC from '@assets/logo_topright.png';
 import { checkForTokenById } from '@utils/tokenMethods.js';
-import { currency } from './Common/Ticker';
 // Biometric security import not used in extension/src/components/App.js
 import ProtectableComponentWrapper from './Authentication/ProtectableComponentWrapper';
 

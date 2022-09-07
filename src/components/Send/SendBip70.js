@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { 
-    useLocation,
     useHistory
 } from 'react-router-dom';
 import PropTypes from 'prop-types';
@@ -67,7 +66,6 @@ const SendBip70 = ({ passLoadingStatus }) => {
     // If the wallet object from ContextValue has a `state key`, then check which keys are in the wallet object
     // Else set it as blank
     const ContextValue = React.useContext(WalletContext);
-    const location = useLocation();
     const { wallet, fiatPrice, apiError, cashtabSettings } = ContextValue;
     const walletState = getWalletState(wallet);
     const { 

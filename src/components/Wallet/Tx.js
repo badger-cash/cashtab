@@ -11,7 +11,7 @@ import {
 import { currency } from '@components/Common/Ticker';
 import makeBlockie from 'ethereum-blockies-base64';
 import { Img } from 'react-image';
-import { formatBalance, fromLegacyDecimals } from '@utils/cashMethods';
+import { formatBalance } from '@utils/cashMethods';
 import { authPubKeys } from '@utils/selfMint';
 
 const SentTx = styled(ArrowUpOutlined)`
