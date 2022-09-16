@@ -241,10 +241,15 @@ const Checkout = ({ passLoadingStatus }) => {
                     prInfo.type
                 )).paymentDetails;
             } catch (err) {
-                return errorNotification(err, 
+                errorNotification(err, 
                     'Failed to fetch invoice. May be expired or invalid', 
                     `Fetching invoice: ${prInfo.url}`
                 );
+                await sleep(3000);
+                // Manually disable loading
+                passLoadingStatus(false);
+                window.history.replaceState(null, '', window.location.origin);
+                return history.push(`/wallet`);
             }
         }
         setPrInfoFromUrl(prInfo);
@@ -446,8 +451,7 @@ const Checkout = ({ passLoadingStatus }) => {
             // Sleep for 10 seconds and then 
             // await sleep(10000);
             // Manually disable loading
-            passLoadingStatus(false);
-            return forceWalletUpdate();
+            return passLoadingStatus(false);
             // return window.location.reload();
         } catch (e) {
             handleSendXecError(e, authCodeB64);

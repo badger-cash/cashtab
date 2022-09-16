@@ -244,10 +244,16 @@ const SendBip70 = ({ passLoadingStatus }) => {
                     prInfo.type
                 )).paymentDetails;
             } catch (err) {
-                return errorNotification(err, 
+                errorNotification(err, 
                     'Failed to fetch invoice. May be expired or invalid', 
                     `Fetching invoice: ${prInfo.url}`
                 );
+                // Sleep for 3 seconds and then 
+                await sleep(3000);
+                // Manually disable loading
+                passLoadingStatus(false);
+                window.history.replaceState(null, '', window.location.origin);
+                return history.push(`/wallet`);
             }
         }
         setPrInfoFromUrl(prInfo);

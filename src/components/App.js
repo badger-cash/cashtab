@@ -257,40 +257,11 @@ const App = () => {
         : false;
     
     const codeSplitLoader = <LoadingBlock>{CashLoadingIcon}</LoadingBlock>;
-/*     useEffect(() => {
-        // If URL is not as specified in currency.appURL in Ticker.js, show a popup
-        const currentUrl = window.location.hostname;
-        if (currentUrl !== currency.appUrl) {
-            console.log(
-                `Loaded URL ${currentUrl} does not match app URL ${currency.appUrl}!`,
-            );
-            Modal.warning({
-                title: 'Cashtab is moving!',
-                content: (
-                    <div>
-                        <p>
-                            Cashtab is moving to a new home at{' '}
-                            <a
-                                href="https://cashtab.com/"
-                                target="_blank"
-                                rel="noreferrer"
-                            >
-                                Cashtab.com
-                            </a>
-                        </p>
-                        <p>
-                            Please write down your wallet 12-word seed and
-                            import it at the new domain.
-                        </p>
-                        <p>
-                            At the end of the month, cashtabapp.com will
-                            auto-fwd to cashtab.com after one minute.
-                        </p>
-                    </div>
-                ),
-            });
-        }
-    }, []); */
+
+    const navRedirect = (key) => {
+            window.history.replaceState(null, '', window.location.origin);
+            history.push(`/${key}`)
+    }
 
     return (
         <ThemeProvider theme={theme}>
@@ -389,7 +360,7 @@ const App = () => {
                             <Footer>
                                 <NavButton
                                     active={selectedKey === 'wallet'}
-                                    onClick={() => history.push('/wallet')}
+                                    onClick={() => navRedirect('wallet')}
                                 >
                                     <FolderOpenFilled />
                                     Wallet
@@ -397,7 +368,7 @@ const App = () => {
 
                                 <NavButton
                                     active={selectedKey === 'tokens'}
-                                    onClick={() => history.push('/tokens')}
+                                    onClick={() => navRedirect('tokens')}
                                 >
                                     <AppstoreAddOutlined />
                                     eTokens
@@ -405,14 +376,14 @@ const App = () => {
 
                                 <NavButton
                                     active={selectedKey === 'send'}
-                                    onClick={() => history.push('/send')}
+                                    onClick={() => navRedirect('send')}
                                 >
                                     <CaretRightOutlined />
                                     Send
                                 </NavButton>
                                 <NavButton
                                     active={selectedKey === 'configure'}
-                                    onClick={() => history.push('/configure')}
+                                    onClick={() => navRedirect('configure')}
                                 >
                                     <SettingFilled />
                                     Settings
