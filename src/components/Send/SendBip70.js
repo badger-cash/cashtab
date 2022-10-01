@@ -410,10 +410,20 @@ const SendBip70 = ({ passLoadingStatus }) => {
             else {
                 sendXecNotification(link);
             }
+            
+            // Send to success page if included in merchantDetails
+            if (paymentDetails.merchantData) {
+                const merchantDataJson = JSON.parse(paymentDetails.merchantData.toString());
+                if (merchantDataJson.callback?.success_url) {
+                    return window.location.assign(merchantDataJson.callback.success_url);
+                }
+            }
+            
             // Sleep for 3 seconds and then 
             await sleep(3000);
             // Manually disable loading
             passLoadingStatus(false);
+            // Return to main wallet screen
             window.history.replaceState(null, '', window.location.origin);
             return history.push(`/wallet`);
         } catch (e) {
