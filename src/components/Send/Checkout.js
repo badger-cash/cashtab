@@ -178,7 +178,11 @@ const Checkout = ({ passLoadingStatus }) => {
                 .toFixed(formData.token.decimals);
             if (purchaseTokenIds.includes(formData.token?.tokenId)) {
                 // Set amount to purchase
-                const purchaseAmount = difference < 0 ? Math.abs(difference) : 0
+                let purchaseAmount = difference < 0 ? Math.abs(difference) : 0
+                if (purchaseAmount > 0) {
+                    const rounded = Math.ceil(purchaseAmount * 100) / 100;
+                    purchaseAmount = rounded < 1 ? 1 : rounded;
+                }
                 setPurchaseTokenAmount(purchaseAmount);
             }
         }
