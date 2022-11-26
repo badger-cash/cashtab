@@ -1323,7 +1323,9 @@ export default function useBCH() {
                 value: 0
             }],
             memo: paymentDetails.memo
-        } 
+        }
+
+        let txidStr = tx.txid().toString('hex');
 
         // Broadcast transaction to the network
         let paymentAck;
@@ -1334,12 +1336,16 @@ export default function useBCH() {
                 isSlp ? currency.tokenPrefixes[0] : currency.prefixes[0]
             );
         }
-        const txidStr = tx.txid().toString('hex');
 
         if (paymentAck.payment) {
             // Return the payment object from the ACK if is preburn
             if (isPreburn)
                 return paymentAck.payment
+
+            const transactionIds = paymentAck.payment.transactions.map(t =>
+                TX.fromRaw(t).txid()
+            );
+            txidStr = transactionIds[0];
 
             console.log(`${currency.tokenTicker} txid`, txidStr);
         }

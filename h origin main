@@ -1,0 +1,261 @@
+[33mcommit e1da3ff6636d957d5e329e161df2b4a87057961a[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m)[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Wed Nov 23 13:26:50 2022 +1000
+
+    rounding of paymentAmount in checkout
+
+[33mcommit e57d55c8aded5859963f299856e9c421f0ea126b[m[33m ([m[1;31morigin/main[m[33m)[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Sat Oct 1 13:09:18 2022 +1000
+
+    fast redirect if success url present in BIP70
+
+[33mcommit ffba4f766278586b7fa1b0b8c7b0baeccdbc6180[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Fri Sep 16 21:31:23 2022 +1000
+
+    fix update wallet conflict bug
+
+[33mcommit 3d0827432459720a4dda721809e1cb5c24eeac2e[m[33m ([m[1;32mcleanup[m[33m)[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Wed Sep 7 13:19:31 2022 +1000
+
+    force update of wallet after mint in Checkout
+
+[33mcommit 0214c3dcd0ef0e1bf590f7c4007f423abe660cc8[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Wed Sep 7 12:11:55 2022 +1000
+
+    remove unused imports
+
+[33mcommit b32616f5eb04c7bc3767df6169565dba4d9b1afb[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Wed Sep 7 08:53:29 2022 +1000
+
+    bump version
+
+[33mcommit a7d8e3c7ec4d56368601250e1a7bd2a422612b46[m[33m ([m[1;32mcheckout[m[33m)[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Wed Sep 7 08:51:45 2022 +1000
+
+    refresh page to update Checkout balance
+
+[33mcommit ebf88bd2e9609e4b78ca1552e4b99a308ca4ebe1[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Tue Sep 6 17:48:11 2022 +1000
+
+    add Checkout
+
+[33mcommit ae603b8db1c6b25f12452e19d145812529a44664[m
+Author: Vin Armani <33237395+vinarmani@users.noreply.github.com>
+Date:   Wed Apr 20 12:29:26 2022 +1000
+
+    Update README.md
+
+[33mcommit d75a348d7530ae422b186e3b45f0100ffab866e7[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Wed Apr 20 12:22:00 2022 +1000
+
+    v1.3.0
+
+[33mcommit 68145cbf17d88d31619a495e576a097425485106[m
+Merge: 7008227 7b4f606
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Wed Apr 20 12:15:00 2022 +1000
+
+    Merge branch 'fix-start'
+
+[33mcommit 7008227928e6d6d79d232ade7ae201fe643990e0[m
+Merge: 331d106 c6a1cab
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Wed Apr 20 12:13:50 2022 +1000
+
+    Merge branch 'main' of https://github.com/badger-cash/cashtab
+
+[33mcommit c6a1cab2ef8aade7e2c803da4ad73a0f0c055a94[m[33m ([m[1;33mtag: v1.2.2[m[33m)[m
+Author: Vin Armani <33237395+vinarmani@users.noreply.github.com>
+Date:   Wed Apr 20 12:11:47 2022 +1000
+
+    v1.2.2
+
+[33mcommit 7b4f606322556d8d7ce2f18f22a9f2109b22ee00[m[33m ([m[1;32mfix-start[m[33m)[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Wed Apr 20 09:45:58 2022 +1000
+
+    clean up token UI
+
+[33mcommit f1ff411ce5bb6e666d9d64e10b2e30cc4e6dbfec[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Wed Apr 20 09:12:29 2022 +1000
+
+    add loading elements
+
+[33mcommit e5663d04614473a851c88224c568f791616069a8[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Tue Apr 19 15:59:01 2022 +1000
+
+    upgrade webpack-dev-server
+
+[33mcommit 331d106fe886634d13d3f26001c14ab688e09a9b[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Tue Apr 19 15:31:37 2022 +1000
+
+    route-based code splitting
+
+[33mcommit 54e46927149b57bf08205e8f4b67d4cf87b1d4f8[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Tue Apr 19 09:35:37 2022 +1000
+
+    BURN enabled
+
+[33mcommit 0785c1024fc0bb875cbd8d6ba3c13d489472c416[m[33m ([m[1;33mtag: v1.2.1[m[33m)[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Sun Feb 13 07:38:03 2022 +1000
+
+    v1.2.1
+
+[33mcommit fe59ffba8a215a204270aa0c3a3e8006d9220c46[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Sun Feb 13 07:37:07 2022 +1000
+
+    fix search param removal in self mint screen
+
+[33mcommit df3c12efca3748ed0a31a9436e55ca9637459a75[m[33m ([m[1;33mtag: v1.2.0[m[33m)[m
+Author: Vin Armani <33237395+vinarmani@users.noreply.github.com>
+Date:   Sat Feb 12 14:39:34 2022 +1000
+
+    Update README.md
+
+[33mcommit 93213b86c0ec65ddedca062fb97a21aeabf25f9e[m
+Merge: 174660a f616e6e
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Sat Feb 12 14:17:18 2022 +1000
+
+    Merge branch 'main' of https://github.com/badger-cash/cashtab
+
+[33mcommit 174660ad5fe8c0bb404e4d583f100b4f836ee4f7[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Sat Feb 12 14:16:44 2022 +1000
+
+    remove loading after token send
+
+[33mcommit f616e6eb0a68bbe132f1d38c325de7a2215abe68[m
+Author: Vin Armani <33237395+vinarmani@users.noreply.github.com>
+Date:   Sat Feb 12 13:17:47 2022 +1000
+
+    v1.2.0
+
+[33mcommit 96424b2404bb59c334fc6d932c49595607638f7d[m
+Merge: 44ceb2c e527f36
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Sat Feb 12 13:15:49 2022 +1000
+
+    Merge branch 'main' of https://github.com/badger-cash/cashtab
+
+[33mcommit 44ceb2c45d7c5f9bc39166e2a94347bcaacbc5bf[m[33m ([m[1;32mpostage[m[33m)[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Sat Feb 12 13:14:56 2022 +1000
+
+    postage protocol support
+
+[33mcommit 0b7c085f86a1ae57d80e0b983f64aa3a6c3d4a77[m[33m ([m[1;32mbip70[m[33m)[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Fri Feb 11 13:26:13 2022 +1000
+
+    self mint and auth code purchase
+
+[33mcommit 57a9649f5bb381ef0a85726677e959955a45d422[m[33m ([m[1;31morigin/bip70[m[33m)[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Wed Jan 19 15:52:37 2022 +1000
+
+    add self mint and postage paid BIP 70 support
+
+[33mcommit 3c4ff4c5c86007901a863edc843b9c9363f8973e[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Tue Jan 18 17:40:18 2022 +1000
+
+    fix sendToken and notifications
+
+[33mcommit 0bb074fc393b6dd93dfa484884e0e0b95997a060[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Fri Jan 14 13:11:49 2022 +1000
+
+    redirect to BUX purchase
+
+[33mcommit c7b998c6844dab2684f166bf71358093082bc9cb[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Fri Jan 14 11:23:33 2022 +1000
+
+    redirect to sendBIP70 if PR URI present
+
+[33mcommit b53dd1d3d848ad98729059e545299f4217de6d69[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Wed Jan 12 13:58:49 2022 +1000
+
+    fix hash check in SLP GENESIS creation
+
+[33mcommit 4a9f15eb991880be87511f3bbeacd1c9ea1fea85[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Wed Jan 12 13:58:02 2022 +1000
+
+    handle expired or invalid invoice
+
+[33mcommit b6ddbcf6944f9fc7afc872ad3f07427c343c1829[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Mon Dec 27 16:23:08 2021 +1000
+
+    BIP70 support
+
+[33mcommit e527f36cdf4e4592090cba57cd56d8b7081b5b6e[m
+Author: Vin Armani <33237395+vinarmani@users.noreply.github.com>
+Date:   Fri Dec 17 15:26:16 2021 +1000
+
+    Update README.md
+
+[33mcommit 0aea8598a1bc02ac3925efd589349c27501bb6e3[m[33m ([m[1;33mtag: v1.1.0[m[33m)[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Fri Dec 17 15:20:38 2021 +1000
+
+    remove bch-js
+
+[33mcommit ed1d3b953b66e4669d55b8bd39924ad718da75cc[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Fri Dec 17 14:56:18 2021 +1000
+
+    all tests pass except useWallet
+
+[33mcommit 8780effeb11d2b2a760edbef960aa7bad4d9039c[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Wed Dec 15 15:11:41 2021 +1000
+
+    migrate send and tokens tests
+
+[33mcommit 390b1962374db04c310931c7e6faa8c9bbeec123[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Tue Dec 14 14:38:16 2021 +1000
+
+    remove logging
+
+[33mcommit 7a003077e76190367a45774a877f3f211bb5fe88[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Tue Dec 14 11:47:55 2021 +1000
+
+    correct README
+
+[33mcommit 5f16a6daf8dc842fe5e4bd604c514a46aa3929f3[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Tue Dec 14 11:47:15 2021 +1000
+
+    correct README
+
+[33mcommit 24616f61235cc98d8bee00fbcf8abcf93dd24812[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Tue Dec 14 11:45:54 2021 +1000
+
+    bcash API in README
+
+[33mcommit 67e1fe534b63a44c366915f831bb10e735163578[m
+Author: Vin Armani <vin@vinarmani.com>
+Date:   Tue Dec 14 11:43:14 2021 +1000
+
+    migrate to bcash
