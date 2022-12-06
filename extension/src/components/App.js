@@ -78,12 +78,12 @@ const GlobalStyle = createGlobalStyle`
 
 const CustomApp = styled.div`
     text-align: center;
-    font-family: 'Gilroy', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     background-color: ${props => props.theme.app.background};
 `;
 
 const Footer = styled.div`
-    z-index: 2;
+    z-index: 2999;
     background-color: ${props => props.theme.footer.background};
     border-radius: 20px;
     position: fixed;
@@ -138,8 +138,7 @@ export const WalletBody = styled.div`
     justify-content: center;
     width: 100%;
     min-height: 100vh;
-    background-image: ${props => props.theme.app.sidebars};
-    background-attachment: fixed;
+    background: #d5d5d5;    
 `;
 
 export const WalletCtn = styled.div`
@@ -149,10 +148,7 @@ export const WalletCtn = styled.div`
     min-height: 100vh;
     padding: 10px 30px 120px 30px;
     background: ${props => props.theme.wallet.background};
-    -webkit-box-shadow: 0px 0px 24px 1px ${props => props.theme.wallet.shadow};
-    -moz-box-shadow: 0px 0px 24px 1px ${props => props.theme.wallet.shadow};
-    box-shadow: 0px 0px 24px 1px ${props => props.theme.wallet.shadow};
-    @media (max-width: 768px) {
+    box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.1), 0px 3px 6px rgba(0, 0, 0, 0.05);    @media (max-width: 768px) {
         width: 100%;
         -webkit-box-shadow: none;
         -moz-box-shadow: none;
@@ -165,10 +161,9 @@ export const HeaderCtn = styled.div`
     align-items: center;
     justify-content: center;
     width: 100%;
-    padding: 20px 0 30px;
+    padding: 10px 0 0px;
     margin-bottom: 20px;
-    justify-content: space-between;
-    border-bottom: 1px solid ${props => props.theme.wallet.borders.color};
+    justify-content: flex-end;
 
     a {
         color: ${props => props.theme.wallet.text.secondary};
@@ -187,10 +182,15 @@ export const HeaderCtn = styled.div`
 `;
 
 export const CashTabLogo = styled.img`
-    width: 120px;
-    @media (max-width: 768px) {
-        width: 110px;
-    }
+    width: 70px;
+`;
+
+// AbcLogo styled component not included in extension, replaced by open in new tab link
+export const AbcLogo = styled.img`
+	width: 70px;
+	// @media (max-width: 768px) {
+	// 	width: 120px;
+	// }
 `;
 
 // Extension only styled components

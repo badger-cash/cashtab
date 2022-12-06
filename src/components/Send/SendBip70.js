@@ -4,16 +4,11 @@ import {
 } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { WalletContext } from '@utils/context';
-import {
-    SendBip70Input,
-    Bip70AddressSingle,
-} from '@components/Common/EnhancedInputs';
+import { Bip70AddressSingle } from '@components/Common/EnhancedInputs';
 import {
     Form,
-    Modal,
-    Button,
+    Modal
 } from 'antd';
-import { Row, Col } from 'antd';
 import PrimaryButton, {
     SecondaryButton,
 } from '@components/Common/PrimaryButton';
@@ -31,10 +26,7 @@ import {
     fiatToCrypto,
     shouldRejectAmountInput,
 } from '@utils/validation';
-import BalanceHeader from '@components/Common/BalanceHeader';
-import BalanceHeaderFiat from '@components/Common/BalanceHeaderFiat';
 import {
-    ZeroBalanceHeader,
     ConvertAmount,
     AlertMsg,
 } from '@components/Common/Atoms';
@@ -54,10 +46,18 @@ import {
 } from 'bcash';
 const { SLP } = script;
 import { U64 } from 'n64';
+import CheckOutIcon from "@assets/checkout_icon.svg";
+import {
+	CheckoutHeader,
+	CheckoutStyles,
+	PaymentDetails,
+	PurchaseAuthCode,
+	Heading,
+	ListItem,
+	CheckoutIcon,
+	HorizontalSpacer,
+} from "../../assets/styles/checkout.styles";
 
-const MemoLabel = styled.div`
-    color: purple;
-`;
 
 const SendBip70 = ({ passLoadingStatus }) => {
     // use balance parameters from wallet.state object and not legacy balances parameter from walletState, if user has migrated wallet
@@ -243,6 +243,7 @@ const SendBip70 = ({ passLoadingStatus }) => {
                     prInfo.url, 
                     prInfo.type
                 )).paymentDetails;
+				prInfo.paymentDetails.merchantDataJson = JSON.parse(prInfo.paymentDetails.merchantData.toString());
             } catch (err) {
                 errorNotification(err, 
                     'Failed to fetch invoice. May be expired or invalid', 
@@ -514,6 +515,9 @@ const SendBip70 = ({ passLoadingStatus }) => {
     const displayBalance = tokenFormattedBalance || balances.totalBalance;
     const displayTicker = formData.token?.ticker || currency.ticker;
 
+	const { invoice, merchant_name, offer_description, offer_name } =
+		prInfoFromUrl.paymentDetails?.merchantDataJson?.ipn_body || {};
+            
     return (
         <>
             <Modal
@@ -539,141 +543,114 @@ const SendBip70 = ({ passLoadingStatus }) => {
                     in order to be able to settle this payment request?
                 </p>
             </Modal>
-            {!checkSufficientFunds() ? (
-                <ZeroBalanceHeader>
-                    You currently have {displayBalance} {displayTicker}
-                    <br />
-                    Deposit some funds to use this feature
-                </ZeroBalanceHeader>
-            ) : (
-                <>
-                    <BalanceHeader
-                        balance={displayBalance}
-                        ticker={displayTicker}
-                    />
-                    {fiatPrice !== null && (
-                        <BalanceHeaderFiat
-                            balance={balances.totalBalance}
-                            settings={cashtabSettings}
-                            fiatPrice={fiatPrice}
-                        />
-                    )}
-                </>
-            )}
 
-            <Row type="flex">
-                <Col span={24}>
-                    <Form
-                        style={{
-                            width: 'auto',
-                        }}
-                    >
-                        {prInfoFromUrl 
-                            && prInfoFromUrl.paymentDetails && (
-                            <>
-                                <Button
-                                    type="text"
-                                    block
-                                >
-                                    <MemoLabel>
-                                        {prInfoFromUrl.paymentDetails.memo}
-                                    </MemoLabel>
-                                </Button>
-                                <Bip70AddressSingle
-                                    validateStatus={
-                                        sendBchAddressError ? 'error' : ''
-                                    }
-                                    help={
-                                        sendBchAddressError
-                                            ? sendBchAddressError
-                                            : ''
-                                    }
-                                    inputProps={{
-                                        placeholder: `${currency.ticker} Address`,
-                                        name: 'address',
-                                        required: true,
-                                        value: formData.address,
-                                    }}
-                                ></Bip70AddressSingle>
-                                <SendBip70Input
-                                    activeTokenCode={
-                                        formData &&
-                                        formData.token
-                                            ? formData.token.ticker
-                                            : currency.ticker
-                                    }
-                                    validateStatus={
-                                        sendBchAmountError ? 'error' : ''
-                                    }
-                                    help={
-                                        sendBchAmountError
-                                            ? sendBchAmountError
-                                            : ''
-                                    }
-                                    inputProps={{
-                                        name: 'value',
-                                        dollar:
-                                            selectedCurrency === 'USD' ? 1 : 0,
-                                        placeholder: 'Amount',
-                                        onChange: e => handleBchAmountChange(e),
-                                        required: true,
-                                        value: formData.value,
-                                        token: formData.token
-                                    }}
-                                    selectProps={{
-                                        disabled: queryStringText !== null,
-                                        onChange: e =>
-                                            handleSelectedCurrencyChange(e),
-                                    }}
-                                ></SendBip70Input>
-                                {!formData.token && priceApiError && (
+			<CheckoutHeader>
+				<CheckoutIcon src={CheckOutIcon} />
+				<h4>CHECKOUT</h4>
+				<hr />
+				<h1>{offer_name}</h1>
+			</CheckoutHeader>
 
-                                    <AlertMsg>
-                                        Error fetching fiat price. Setting send
-                                        by{' '}
-                                        {currency.fiatCurrencies[
-                                            cashtabSettings.fiatCurrency
-                                        ].slug.toUpperCase()}{' '}
-                                        disabled
-                                    </AlertMsg>
-                                )}
-                                {!formData.token && (
-                                    <ConvertAmount>
-                                        {fiatPriceString !== '' && '='}{' '}
-                                        {fiatPriceString}
-                                    </ConvertAmount>
-                                )}
-                            </>
-                        )}
-                        <div
-                            style={{
-                                paddingTop: '32px',
-                            }}
-                        >
-                        </div>
-                        <div
-                            style={{
-                                paddingTop: '12px',
-                            }}
-                        >
-                            {!checkSufficientFunds() ||
-                            apiError ||
-                            sendBchAmountError ||
-                            sendBchAddressError ||
-                            !prInfoFromUrl ? (
-                                <SecondaryButton>Send</SecondaryButton>
-                            ) : (
-                                <PrimaryButton
-                                    onClick={() => showModal()}
-                                >
-                                    Send
-                                </PrimaryButton>
-                            )}
-                        </div>
-                        {apiError && <ApiError />}
-                    </Form>
-                </Col>
-            </Row>
+			<CheckoutStyles>
+				<PaymentDetails>
+					<h3 className="title">Payment Request Details:</h3>
+					<p className="offer-description">{offer_description}</p>
+					<span className="merchant">From {merchant_name}</span>
+				</PaymentDetails>
+
+				<HorizontalSpacer />
+
+				<PurchaseAuthCode>
+					{!checkSufficientFunds() && <p className="text-muted">You have insufficient funds in this wallet</p>}
+					<ListItem className="min-m">
+						<span className="key black">Ready To Send</span>
+						<span className="value black bold">
+							{formData.value} {displayTicker}
+						</span>
+					</ListItem>
+					<p className="text-muted">In order to settle this payment request</p>
+				</PurchaseAuthCode>
+
+				<HorizontalSpacer />
+
+				<PurchaseAuthCode>
+					<ListItem className="min-m">
+						<span className="key black">Balance</span>
+						<div className="value">
+							<div className="black bold">
+								{displayBalance} {displayTicker}
+							</div>
+							{/* <div className="gray">
+								{cashtabSettings
+									? `${currency.fiatCurrencies[cashtabSettings.fiatCurrency].symbol} `
+									: "$ "}
+								{parseFloat((balances.totalBalance * fiatPrice).toFixed(2)).toLocaleString()}{" "}
+								{cashtabSettings
+									? `${currency.fiatCurrencies[cashtabSettings.fiatCurrency].slug.toUpperCase()} `
+									: "USD"}
+							</div> */}
+						</div>
+					</ListItem>
+				</PurchaseAuthCode>
+
+				<HorizontalSpacer />
+
+				<Form>
+					{prInfoFromUrl && prInfoFromUrl.paymentDetails && (
+						<>
+							<Bip70AddressSingle
+								validateStatus={sendBchAddressError ? "error" : ""}
+								help={sendBchAddressError ? sendBchAddressError : ""}
+								inputProps={{
+									placeholder: `${currency.ticker} Address`,
+									name: "address",
+									required: true,
+									value: formData.address,
+								}}
+							></Bip70AddressSingle>
+
+							{!formData.token && priceApiError && (
+								<AlertMsg>
+									Error fetching fiat price. Setting send by{" "}
+									{currency.fiatCurrencies[cashtabSettings.fiatCurrency].slug.toUpperCase()} disabled
+								</AlertMsg>
+							)}
+							{!formData.token && (
+								<ConvertAmount>
+									{fiatPriceString !== "" && "="} {fiatPriceString}
+								</ConvertAmount>
+							)}
+						</>
+					)}
+
+					<ListItem>
+						<span className="key gray">Merchant:</span>
+						<span className="value gray">{merchant_name}</span>
+					</ListItem>
+
+					<ListItem>
+						<span className="key gray">Invoice:</span>
+						<span className="value gray">{invoice}</span>
+					</ListItem>
+					<ListItem>
+						<span className="key gray">Wallet:</span>
+						<span className="value gray">{wallet.name}</span>
+					</ListItem>
+					<HorizontalSpacer />
+					<div>
+						{!checkSufficientFunds() ||
+						apiError ||
+						sendBchAmountError ||
+						sendBchAddressError ||
+						!prInfoFromUrl ? (
+							<SecondaryButton>Send</SecondaryButton>
+						) : (
+							<PrimaryButton onClick={() => showModal()}>Send</PrimaryButton>
+						)}
+					</div>
+					{apiError && <ApiError />}
+				</Form>
+			</CheckoutStyles>
         </>
     );
 };
