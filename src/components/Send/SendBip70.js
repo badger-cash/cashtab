@@ -580,15 +580,6 @@ const SendBip70 = ({ passLoadingStatus }) => {
 							<div className="black bold">
 								{displayBalance} {displayTicker}
 							</div>
-							{/* <div className="gray">
-								{cashtabSettings
-									? `${currency.fiatCurrencies[cashtabSettings.fiatCurrency].symbol} `
-									: "$ "}
-								{parseFloat((balances.totalBalance * fiatPrice).toFixed(2)).toLocaleString()}{" "}
-								{cashtabSettings
-									? `${currency.fiatCurrencies[cashtabSettings.fiatCurrency].slug.toUpperCase()} `
-									: "USD"}
-							</div> */}
 						</div>
 					</ListItem>
 				</PurchaseAuthCode>
