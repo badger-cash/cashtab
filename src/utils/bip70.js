@@ -109,6 +109,9 @@ export const getPaymentRequest = async (paymentRequestUrl, type) => {
     if (!paymentReq.verifyChain())
             throw new Error('Invalid Payment Request certificate chain');
 
+    if (!paymentReq.verify())
+        throw new Error('Invalid Payment Request signature');
+
     return paymentReq;
 }
 
