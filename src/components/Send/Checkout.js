@@ -606,18 +606,30 @@ const Checkout = ({ passLoadingStatus }) => {
                 </p>
             </Modal>
 
-			<CheckoutHeader onClick={() => setTokensMinted(true)}>
-				<CheckoutIcon src={CheckOutIcon} />
-				<h4>CHECKOUT</h4>
-				<hr />
-				<h1>{offer_name}</h1>
-			</CheckoutHeader>
+                <CheckoutHeader onClick={() => setTokensMinted(true)}>
+                    <CheckoutIcon src={CheckOutIcon} />
+                    <h4>CHECKOUT</h4>
+                    <hr />             
+                    {(offer_name && (
+                        <>
+                            <h1>{offer_name}</h1>
+                        </>
+                    ))}                            
+                </CheckoutHeader>
 
 			<CheckoutStyles>
 				<PaymentDetails>
 					<h3 className="title">Payment Request Details:</h3>
-					<p className="offer-description">{offer_description}</p>
-					<span className="merchant">From {merchant_name}</span>
+                    {(offer_description && (
+                        <>
+                            <p className="offer-description">{offer_description}</p>
+                            <span className="merchant">From {merchant_name}</span>
+                        </>
+                    )) || (prInfoFromUrl && prInfoFromUrl.paymentDetails && (
+                        <>
+                            <p className="offer-description">{prInfoFromUrl.paymentDetails.memo}</p>                        
+                        </>
+                    ))}
 				</PaymentDetails>
 
 				<HorizontalSpacer />
@@ -668,22 +680,30 @@ const Checkout = ({ passLoadingStatus }) => {
 				)}
 
 				<HorizontalSpacer />
+                
+                {merchant_name && (
+                    <>
+                        <ListItem>
+                            <span className="key gray">Merchant:</span>
+                            <span className="value gray">{merchant_name}</span>
+                        </ListItem>                       
+                    </>
+                )}
 
-				<ListItem>
-					<span className="key gray">Merchant:</span>
-					<span className="value gray">{merchant_name}</span>
-				</ListItem>
+                {invoice && (
+                    <>
+                        <ListItem>
+                            <span className="key gray">Invoice:</span>
+                            <span className="value gray">{invoice}</span>
+                        </ListItem>                    
+                    </>
+                )}
 
-				<ListItem>
-					<span className="key gray">Invoice:</span>
-					<span className="value gray">{invoice}</span>
-				</ListItem>
-				<ListItem>
-					<span className="key gray">Wallet:</span>
-					<span className="value gray">{wallet.name}</span>
-				</ListItem>
-
-				<HorizontalSpacer />
+				{(merchant_name || invoice) && (
+                    <>
+                        <HorizontalSpacer />                    
+                    </>
+                )}
 			</CheckoutStyles>
 
             <Form>            

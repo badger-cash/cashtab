@@ -2,7 +2,7 @@ import styled from "styled-components";
 
 export const CheckoutHeader = styled.div`
 	display: flex;
-	margin: 0 auto 2rem;
+	margin: 0 auto 1rem;
 	flex-direction: column;
 	h4 {
 		font-size: 1rem;
@@ -52,7 +52,7 @@ export const PaymentDetails = styled.div`
 		font-size: 1rem;
 		line-height: 1.25;
 		min-height: 2.5rem;
-		margin: 0 0 0.5rem;
+		margin: 0 0 0rem;
 
 		color: #000000;
 	}
@@ -133,6 +133,6 @@ export const HorizontalSpacer = styled.hr`
 	height: 1px;
 	width: 100%;
 	border: 0;
-	margin: 1rem 0;
+	margin: 0.6rem 0;
 	background: rgba(0, 0, 0, 0.1);
 `;
