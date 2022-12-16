@@ -606,7 +606,7 @@ const Checkout = ({ passLoadingStatus }) => {
                 </p>
             </Modal>
 
-                <CheckoutHeader onClick={() => setTokensMinted(true)}>
+                <CheckoutHeader>
                     <CheckoutIcon src={CheckOutIcon} />
                     <h4>CHECKOUT</h4>
                     <hr />             
