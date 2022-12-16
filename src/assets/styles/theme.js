@@ -42,7 +42,7 @@ export const theme = {
     forms: {
         error: '#FF21D0',
         border: '#e7edf3',
-        text: '#001137',
+        text: '#000',
         addonBackground: '#f4f4f4',
         addonForeground: '#3e3f42',
         selectionBackground: '#fff',

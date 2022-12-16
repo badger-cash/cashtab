@@ -9,11 +9,9 @@ import { WalletContext } from '@utils/context';
 import {
     Form,
     Modal,
-    Button,
     Spin
 } from 'antd';
 import { CashLoadingIcon } from '@components/Common/CustomIcons';
-import { Row, Col } from 'antd';
 import PrimaryButton from '@components/Common/PrimaryButton';
 import useBCH from '@hooks/useBCH';
 import {
@@ -27,16 +25,12 @@ import {
 } from '@components/Common/Ticker.js';
 import { Event } from '@utils/GoogleAnalytics';
 import { fiatToCrypto } from '@utils/validation';
-import BalanceHeader from '@components/Common/BalanceHeader';
-import BalanceHeaderFiat from '@components/Common/BalanceHeaderFiat';
-import { ZeroBalanceHeader } from '@components/Common/Atoms';
 import { 
     getWalletState,
     fromSmallestDenomination
 } from '@utils/cashMethods';
 import ApiError from '@components/Common/ApiError';
 import { formatFiatBalance } from '@utils/validation';
-import styled from 'styled-components';
 import cashaddr from 'ecashaddrjs';
 import { getUrlFromQueryString } from '@utils/bip70';
 import { getPaymentRequest } from '../../utils/bip70';
@@ -46,30 +40,18 @@ import {
 } from 'bcash';
 const { SLP } = script;
 import { U64 } from 'n64';
+import CheckOutIcon from "@assets/checkout_icon.svg";
+import {
+	CheckoutHeader,
+	CheckoutStyles,
+	PaymentDetails,
+	PurchaseAuthCode,
+	Heading,
+	ListItem,
+	CheckoutIcon,
+	HorizontalSpacer,
+} from "../../assets/styles/checkout.styles";
 
-const MemoLabel = styled.div`
-    color: purple;
-    font-weight: bold;
-`;
-
-const TermsLink = styled.a`
-    text-decoration: underline;
-    color: ${props => props.theme.primary};
-    :visited {
-        text-decoration: underline;
-        color: ${props => props.theme.primary};
-    }
-    :hover {
-        color: ${props => props.theme.brandSecondary};
-    }
-`;
-
-const StyledSpacer = styled.div`
-    height: 1px;
-    width: 100%;
-    background-color: ${props => props.theme.wallet.borders.color};
-    margin: 20px 0 50px;
-`;
 
 const Checkout = ({ passLoadingStatus }) => {
     // use balance parameters from wallet.state object and not legacy balances parameter from walletState, if user has migrated wallet
@@ -244,6 +226,7 @@ const Checkout = ({ passLoadingStatus }) => {
                     prInfo.url, 
                     prInfo.type
                 )).paymentDetails;
+                prInfo.paymentDetails.merchantDataJson = JSON.parse(prInfo.paymentDetails.merchantData.toString());
             } catch (err) {
                 errorNotification(err, 
                     'Failed to fetch invoice. May be expired or invalid', 
@@ -598,16 +581,6 @@ const Checkout = ({ passLoadingStatus }) => {
                         }}
                     />
                 </PayPalScriptProvider>
-                <StyledSpacer />[
-                    <TermsLink
-                        type="link"
-                        href="https://bux.digital/tos.html"
-                        target="_blank"
-                        rel="noreferrer"
-                    >
-                        Terms of Service
-                    </TermsLink>
-                ]
             </>
         );
     }
@@ -616,6 +589,8 @@ const Checkout = ({ passLoadingStatus }) => {
 
     const displayBalance = tokenFormattedBalance || balances.totalBalance;
     const displayTicker = formData.token?.ticker || currency.ticker;
+    const { invoice, merchant_name, offer_description, offer_name } = prInfoFromUrl.paymentDetails?.merchantDataJson?.ipn_body || {};
+    const isStage1 = !checkSufficientFunds() || apiError || sendBchAmountError || sendBchAddressError || !prInfoFromUrl;
 
     return (
         <>
@@ -630,98 +605,116 @@ const Checkout = ({ passLoadingStatus }) => {
                     {displayTicker} to settle this payment request?
                 </p>
             </Modal>
-            {!checkSufficientFunds() && !tokensMinted? (
-                <>
-                    <ZeroBalanceHeader>
-                        You have insufficient funds in this wallet
-                        <br /><br />
-                        Purchase an authorization code for {' '}
-                        <strong>{purchaseTokenAmount}{' '}{displayTicker}{' '}</strong>
-                        <br />
-                        to settle this payment request
-                    </ZeroBalanceHeader>
-                    <Button
-                        type="text"
-                        block
-                    >
-                        <MemoLabel>
-                            {`$${purchaseTokenAmount} (+ $${feeAmount} processing fee)`}
-                        </MemoLabel>
-                    </Button>
-                </>
-            ) : (
-                <>
-                    <BalanceHeader
-                        /* balance={displayBalance} */
-                        balance={formData.value}
-                        ticker={displayTicker}
-                    />
-                    {fiatPrice !== null && false && (
-                        <BalanceHeaderFiat
-                            balance={balances.totalBalance}
-                            settings={cashtabSettings}
-                            fiatPrice={fiatPrice}
-                        />
-                    )}
-                </>
-            )}
 
-            <Row type="flex">
-                <Col span={24}>
-                    <Form
-                        style={{
-                            width: 'auto',
-                        }}
-                    >
-                        {prInfoFromUrl 
-                            && prInfoFromUrl.paymentDetails && (
-                            <Button
-                                type="text"
-                                block
-                            >
-                                <MemoLabel>
-                                    {prInfoFromUrl.paymentDetails.memo}
-                                </MemoLabel>
-                            </Button>
-                        )}
-                        <div
-                            style={{
-                                paddingTop: '32px',
-                            }}
-                        >
-                        </div>
-                        <div
-                            style={{
-                                paddingTop: '12px',
-                            }}
-                        >
-                            {!checkSufficientFunds() ||
-                            apiError ||
-                            sendBchAmountError ||
-                            sendBchAddressError ||
-                            !prInfoFromUrl ? (
-                                <>
-                                    {!tokensMinted ? (
-                                        <PayPalSection />
-                                    ) : (
-                                        <Spin
-                                            spinning={true}
-                                            indicator={CashLoadingIcon}
-                                        ></Spin>
-                                    )}
-                                </>
-                            ) : (
-                                <PrimaryButton
-                                    onClick={() => showModal()}
-                                >
-                                    Send
-                                </PrimaryButton>
-                            )}
-                        </div>
-                        {apiError && <ApiError />}
-                    </Form>
-                </Col>
-            </Row>
+                <CheckoutHeader onClick={() => setTokensMinted(true)}>
+                    <CheckoutIcon src={CheckOutIcon} />
+                    <h4>CHECKOUT</h4>
+                    <hr />             
+                    {(offer_name && (
+                        <>
+                            <h1>{offer_name}</h1>
+                        </>
+                    ))}                            
+                </CheckoutHeader>
+
+			<CheckoutStyles>
+				<PaymentDetails>
+					<h3 className="title">Payment Request Details:</h3>
+                    {(offer_description && (
+                        <>
+                            <p className="offer-description">{offer_description}</p>
+                            <span className="merchant">From {merchant_name}</span>
+                        </>
+                    )) || (prInfoFromUrl && prInfoFromUrl.paymentDetails && (
+                        <>
+                            <p className="offer-description">{prInfoFromUrl.paymentDetails.memo}</p>                        
+                        </>
+                    ))}
+				</PaymentDetails>
+
+				<HorizontalSpacer />
+
+				{(isStage1 && (
+					<>
+						<PurchaseAuthCode>
+							{!checkSufficientFunds() && <p className="text-muted">You have insufficient funds in this wallet</p>}
+							<ListItem className="min-m">
+								<span className="key black">Purchase an Auth Code for</span>
+								<span className="value black bold">
+									{purchaseTokenAmount} {displayTicker}
+								</span>
+							</ListItem>
+							<p className="text-muted">In order to settle this payment request</p>
+						</PurchaseAuthCode>
+
+						<HorizontalSpacer />
+
+						<Heading>Transaction Details:</Heading>
+
+						<ListItem>
+							<span className="key gray">Subtotal:</span>
+							<span className="value gray">${purchaseTokenAmount}</span>
+						</ListItem>
+
+						<ListItem>
+							<span className="key gray">Fee:</span>
+							<span className="value gray">${feeAmount}</span>
+						</ListItem>
+						<ListItem>
+							<span className="key gray bold">Total:</span>
+							<span className="value gray bold">${totalAmount}</span>
+						</ListItem>
+					</>
+				)) || (
+					<>
+						<PurchaseAuthCode>
+							<ListItem className="min-m">
+								<span className="key black">Ready To Send</span>
+								<span className="value black bold">
+									{formData.value} {displayTicker}
+								</span>
+							</ListItem>
+							<p className="text-muted">In order to settle this payment request</p>
+						</PurchaseAuthCode>
+					</>
+				)}
+
+				<HorizontalSpacer />
+                
+                {merchant_name && (
+                    <>
+                        <ListItem>
+                            <span className="key gray">Merchant:</span>
+                            <span className="value gray">{merchant_name}</span>
+                        </ListItem>                       
+                    </>
+                )}
+
+                {invoice && (
+                    <>
+                        <ListItem>
+                            <span className="key gray">Invoice:</span>
+                            <span className="value gray">{invoice}</span>
+                        </ListItem>                    
+                    </>
+                )}
+
+				{(merchant_name || invoice) && (
+                    <>
+                        <HorizontalSpacer />                    
+                    </>
+                )}
+			</CheckoutStyles>
+
+            <Form>            
+                {isStage1 ? (
+					<>{!tokensMinted ? <PayPalSection /> : <Spin spinning={true} indicator={CashLoadingIcon}></Spin>}</>
+				) : (
+					<PrimaryButton onClick={() => showModal()}>Send</PrimaryButton>
+				)}
+
+				{apiError && <ApiError />}
+            </Form>
         </>
     );
 };

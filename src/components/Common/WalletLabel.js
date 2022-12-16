@@ -6,7 +6,7 @@ const WalletName = styled.h4`
     font-size: 20px;
     font-weight: bold;
     display: inline-block;
-    color: ${props => props.theme.primary};
+    color: #8a8a8a;
     margin-bottom: 0px;
     @media (max-width: 400px) {
         font-size: 16px;
