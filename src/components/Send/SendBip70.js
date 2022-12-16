@@ -259,6 +259,8 @@ const SendBip70 = ({ passLoadingStatus }) => {
         }
         setPrInfoFromUrl(prInfo);
         prInfo.paymentDetails.type = prInfo.type;
+        // const merchantDataJson = JSON.parse(prInfo.paymentDetails.merchantData?.toString());
+        // console.log("merchantDataJson", merchantDataJson);
         await populateFormsFromPaymentDetails(prInfo.paymentDetails);
 
         passLoadingStatus(false);
