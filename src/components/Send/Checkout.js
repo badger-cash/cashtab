@@ -500,7 +500,7 @@ const Checkout = ({ passLoadingStatus }) => {
         }
     }
 
-    const feeAmount = (.50 + (purchaseTokenAmount * .06)).toFixed(2); // Add 50 cent fixed fee
+    const feeAmount = (.50 + (purchaseTokenAmount * .05)).toFixed(2); // Add 50 cent fixed fee
     const totalAmount = (Number(purchaseTokenAmount) + Number(feeAmount)).toFixed(2);
 
     const PayPalSection = () => {
