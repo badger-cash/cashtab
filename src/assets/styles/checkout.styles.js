@@ -2,7 +2,7 @@ import styled from "styled-components";
 
 export const CheckoutHeader = styled.div`
 	display: flex;
-	margin: 0 auto 1rem;
+	margin: 0 auto 0.1rem;
 	flex-direction: column;
 	h4 {
 		font-size: 1rem;
@@ -95,7 +95,7 @@ export const ListItem = styled.div`
 	width: 100%;
 	display: flex;
 	align-items: center;
-	margin: 0.75rem auto;
+	margin: 0.1rem auto;
 	flex-direction: row;
 	justify-content: space-between;
 	&.min-m {
@@ -133,6 +133,6 @@ export const HorizontalSpacer = styled.hr`
 	height: 1px;
 	width: 100%;
 	border: 0;
-	margin: 0.6rem 0;
+	margin: 0.3rem 0;
 	background: rgba(0, 0, 0, 0.1);
 `;

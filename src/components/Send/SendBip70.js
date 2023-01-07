@@ -547,7 +547,6 @@ const SendBip70 = ({ passLoadingStatus }) => {
 			<CheckoutHeader>
 				<CheckoutIcon src={CheckOutIcon} />
 				<h4>CHECKOUT</h4>
-				<hr />
                 {(offer_name && (
                     <>
 				        <h1>{offer_name}</h1>
@@ -561,7 +560,6 @@ const SendBip70 = ({ passLoadingStatus }) => {
                     {(offer_description && (
                         <>
         					<p className="offer-description">{offer_description}</p>
-		        			<span className="merchant">From {merchant_name}</span>
                         </>
                     )) || (prInfoFromUrl && prInfoFromUrl.paymentDetails && (
                         <>
@@ -641,12 +639,6 @@ const SendBip70 = ({ passLoadingStatus }) => {
                                 <span className="key gray">Invoice:</span>
                                 <span className="value gray">{invoice}</span>
                             </ListItem>                        
-                        </>
-                    )}
-
-                    {(merchant_name || invoice) && (
-                        <>
-					        <HorizontalSpacer />                        
                         </>
                     )}
 

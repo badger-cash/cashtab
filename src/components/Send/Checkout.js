@@ -606,10 +606,9 @@ const Checkout = ({ passLoadingStatus }) => {
                 </p>
             </Modal>
 
-                <CheckoutHeader onClick={() => setTokensMinted(true)}>
+                <CheckoutHeader>
                     <CheckoutIcon src={CheckOutIcon} />
                     <h4>CHECKOUT</h4>
-                    <hr />             
                     {(offer_name && (
                         <>
                             <h1>{offer_name}</h1>
@@ -623,7 +622,6 @@ const Checkout = ({ passLoadingStatus }) => {
                     {(offer_description && (
                         <>
                             <p className="offer-description">{offer_description}</p>
-                            <span className="merchant">From {merchant_name}</span>
                         </>
                     )) || (prInfoFromUrl && prInfoFromUrl.paymentDetails && (
                         <>
@@ -699,11 +697,6 @@ const Checkout = ({ passLoadingStatus }) => {
                     </>
                 )}
 
-				{(merchant_name || invoice) && (
-                    <>
-                        <HorizontalSpacer />                    
-                    </>
-                )}
 			</CheckoutStyles>
 
             <Form>            
