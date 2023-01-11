@@ -136,3 +136,28 @@ export const HorizontalSpacer = styled.hr`
 	margin: 0.3rem 0;
 	background: rgba(0, 0, 0, 0.1);
 `;
+
+export const LoadingWithMessage = styled.div`
+ position: fixed;
+ display: flex;
+ flex-direction: row;
+ text-align: left;
+ padding: 1rem;
+ width: 24rem;
+ gap: 0.5rem;
+ top: 2rem;
+ left: 50%;
+ transform: translateX(-50%);
+ background: #ffb826;
+ color: #000000;
+ box-shadow: 0px 8px 15px rgb(0 0 0 / 10%), 0px 3px 6px rgb(0 0 0 / 5%);
+ border-radius: 1rem;
+ max-width: 90%;
+
+ .ant-spin {
+  transform: scale(0.5);
+ }
+ .cashLoadingIcon {
+  color: #000000 !important;
+ }
+`;

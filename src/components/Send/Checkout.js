@@ -17,7 +17,6 @@ import useBCH from '@hooks/useBCH';
 import {
     sendXecNotification,
     sendTokenNotification,
-    selfMintTokenNotification,
     errorNotification,
 } from '@components/Common/Notifications';
 import {
@@ -50,6 +49,7 @@ import {
 	ListItem,
 	CheckoutIcon,
 	HorizontalSpacer,
+    LoadingWithMessage,
 } from "../../assets/styles/checkout.styles";
 
 
@@ -432,8 +432,6 @@ const Checkout = ({ passLoadingStatus }) => {
         // Track number of XEC BIP70 transactions
         Event('SelfMint.js', 'SelfMint', authCodeB64);
 
-        passLoadingStatus(true);
-
         try {
             // Send transaction
             await sendSelfMint(
@@ -443,7 +441,6 @@ const Checkout = ({ passLoadingStatus }) => {
                 false // testOnly
             );
 
-            selfMintTokenNotification();
             setTokensMinted(true);
             // Sleep for 10 seconds and then 
             // await sleep(10000);
@@ -701,7 +698,12 @@ const Checkout = ({ passLoadingStatus }) => {
 
             <Form>            
                 {isStage1 ? (
-					<>{!tokensMinted ? <PayPalSection /> : <Spin spinning={true} indicator={CashLoadingIcon}></Spin>}</>
+					<>{!tokensMinted ? <PayPalSection /> : 
+                        <LoadingWithMessage>
+                            <Spin spinning={true} indicator={CashLoadingIcon}></Spin>
+                            IMPORTANT: Please do not navigate away. Checkout will refresh. You must hit “Send” to complete purchase.
+                        </LoadingWithMessage>
+                    }</>
 				) : (
 					<PrimaryButton onClick={() => showModal()}>Send</PrimaryButton>
 				)}
