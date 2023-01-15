@@ -701,11 +701,12 @@ const Checkout = ({ passLoadingStatus }) => {
 					<>{!tokensMinted ? <PayPalSection /> : 
                         <LoadingWithMessage>
                             <Spin spinning={true} indicator={CashLoadingIcon}></Spin>
-                            IMPORTANT: Please do not navigate away. Checkout will refresh. You must hit “Send” to complete purchase.
+                            Tokens have been minted! <br/><br/>
+                            ALERT: Do not leave this page – it will refresh automatically. When ready, press “Send” to complete the transaction. Please reload after 5 seconds.
                         </LoadingWithMessage>
                     }</>
 				) : (
-					<PrimaryButton onClick={() => showModal()}>Send</PrimaryButton>
+                    <PrimaryButton onClick={() => showModal()}>Send</PrimaryButton>               
 				)}
 
 				{apiError && <ApiError />}
