@@ -108,6 +108,7 @@ const Checkout = ({ passLoadingStatus }) => {
 
     // Show a confirmation modal on transactions created by populating form from web page button
     const [isModalVisible, setIsModalVisible] = useState(false);
+    const [isSending, setIsSending] = useState(false);
 
     const [tokensMinted, setTokensMinted] = useState(false);
     const [purchaseTokenAmount, setPurchaseTokenAmount] = useState(0);
@@ -126,7 +127,8 @@ const Checkout = ({ passLoadingStatus }) => {
     };
 
     const handleOk = () => {
-        setIsModalVisible(false);
+        // setIsModalVisible(false);
+        setIsSending(true);
         send();
     };
 
@@ -447,8 +449,9 @@ const Checkout = ({ passLoadingStatus }) => {
             setTokensMinted(true);
             // Sleep for 10 seconds and then 
             // await sleep(10000);
+            forceWalletUpdate();
             // Manually disable loading
-            return passLoadingStatus(false);
+            return passLoadingStatus(true);
             // return window.location.reload();
         } catch (e) {
             handleSendXecError(e, authCodeB64);
@@ -591,6 +594,10 @@ const Checkout = ({ passLoadingStatus }) => {
     const displayTicker = formData.token?.ticker || currency.ticker;
     const { invoice, merchant_name, offer_description, offer_name } = prInfoFromUrl.paymentDetails?.merchantDataJson?.ipn_body || {};
     const isStage1 = !checkSufficientFunds() || apiError || sendBchAmountError || sendBchAddressError || !prInfoFromUrl;
+    // For making SEND button available
+    if (!isStage1) {
+        passLoadingStatus(false);
+    }
 
     return (
         <>
@@ -710,7 +717,10 @@ const Checkout = ({ passLoadingStatus }) => {
                 {isStage1 ? (
 					<>{!tokensMinted ? <PayPalSection /> : <Spin spinning={true} indicator={CashLoadingIcon}></Spin>}</>
 				) : (
-					<PrimaryButton onClick={() => showModal()}>Send</PrimaryButton>
+                    <>
+                        {isSending ? <Spin spinning={true} indicator={CashLoadingIcon}></Spin> :
+                        <PrimaryButton onClick={() => handleOk()}>Send</PrimaryButton>}
+                    </>
 				)}
 
 				{apiError && <ApiError />}

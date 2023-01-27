@@ -129,7 +129,14 @@ export const loadStoredWallet = walletStateFromStorage => {
     const { slpBalancesAndUtxos, tokens } = liveWalletState;
     for (let i = 0; i < tokens.length; i += 1) {
         const thisTokenBalance = tokens[i].balance;
-        thisTokenBalance._isBigNumber = true;
+        // Ensure only add property if thisTokenBalance is an object
+        if (
+            typeof thisTokenBalance === 'object' &&
+            !Array.isArray(thisTokenBalance) &&
+            thisTokenBalance !== null
+        ) {
+            thisTokenBalance._isBigNumber = true;
+        }
         tokens[i].balance = new BigNumber(thisTokenBalance);
     }
 

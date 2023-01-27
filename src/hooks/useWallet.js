@@ -896,9 +896,13 @@ const useWallet = () => {
     }
 
     const forceWalletUpdate = async () => {
-        // console.log("forcing wallet update");
+        console.log("forcing wallet update");
         const wallet = await getWallet();
-        return await update({ wallet });
+        update({
+            wallet,
+        }).finally(() => {
+            setLoading(false);
+        });
     }
 
     // Update wallet every 10s
