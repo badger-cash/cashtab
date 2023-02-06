@@ -1112,8 +1112,8 @@ export default function useBCH() {
         const isSlp = slpScript.isValidSlp();
         let postagePaid = false;
         const tokenCoins = [];
-        // If is SLP; use a label to break
-        slpCondition: if (isSlp) {
+        // If is SLP
+        if (isSlp) {
 
             const tokenIdBuf = slpScript.getData(4);
             const tokenId = tokenIdBuf.toString('hex');
@@ -1131,10 +1131,6 @@ export default function useBCH() {
                 }
             }
             console.log('postagePaid', postagePaid);
-
-            // If is a chained transaction, leave this conditional
-            if (rawChainTxs.length > 0)
-                break slpCondition;
 
             // Throw error if transaction type is not SEND
             const slpType = slpScript.getType();
@@ -1155,7 +1151,7 @@ export default function useBCH() {
                     token.balance.toString()
                 );
             }
-            if (totalTokenBalance.lt(totalBase))
+            if (totalTokenBalance.lt(totalBase) && rawChainTxs.length === 0)
                 throw new Error ('Insufficient token balance to complete transaction');
 
             const tokenUtxos = [];
@@ -1218,6 +1214,28 @@ export default function useBCH() {
                       }
                 });
 
+            } else if (rawChainTxs.length > 0) {
+                // If a chain TX is provided, use it for the input coins
+                const parentTx = TX.fromRaw(rawChainTxs[rawChainTxs.length -1]);
+                // Parse SLP script
+                const slpScript = script.SLP.fromRaw(parentTx.outputs[0].script.toRaw())
+                const records = slpScript.getRecords(Buffer.alloc(32))
+                // Iterate through parentTx outputs
+                for (let i = 0; i < parentTx.outputs.length; i++) {
+                    const address = parentTx.outputs[i].getAddress()?.toString()
+                    if (address === REMAINDER_ADDR) {
+                        const record = records.find(r => r.type !== 'BATON' && r.vout === i)
+                        if (record) {
+                            // convert to coin first for compatibility
+                            const coin = Coin.fromTX(parentTx, i, -1);
+                            coin.slp = record;
+                            const utxo = coin.toJSON();
+                            // Add UTXO
+                            tokenUtxos.push(utxo)
+                        }
+                    }
+                }
+            
             } else {
                 // Use available UTXOS in wallet
                 const availableTokenUtxos = slpBalancesAndUtxos.slpUtxos.filter(
@@ -1244,6 +1262,7 @@ export default function useBCH() {
 
             let finalTokenAmountSent = U64.fromInt(0);
             for (let i = 0; i < tokenUtxos.length; i++) {
+                console.log('tokenUtxos', tokenUtxos);
                 const tokenCoin = Coin.fromJSON(tokenUtxos[i]);
                 tokenCoins.push(tokenCoin);
 
@@ -1290,19 +1309,7 @@ export default function useBCH() {
             tx.addOutput(paymentDetails.outputs[i]);
         }
 
-        if (rawChainTxs.length > 0) {
-            if (postagePaid)
-                sigHashType = Script.hashType.ANYONECANPAY | sigHashType;
-            // Use all outputs of final raw chained Tx
-            const parentTx = TX.fromRaw(rawChainTxs[rawChainTxs.length -1]);
-            for (let i = 0; i < parentTx.outputs.length; i++) {
-                const address = parentTx.outputs[i].getAddress()?.toString()
-                if (address === REMAINDER_ADDR) {
-                    const coin = Coin.fromTX(parentTx, i, -1);
-                    tx.addCoin(coin);
-                }
-            }
-        } else if (postagePaid) {
+        if (postagePaid) {
             // Postage Protocol requires ANYONECANPAY
             sigHashType = Script.hashType.ANYONECANPAY | sigHashType;
 
