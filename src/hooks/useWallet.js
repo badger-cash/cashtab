@@ -98,7 +98,7 @@ const useWallet = () => {
         setWallet(wallet);
     };
 
-    const update = async ({ wallet }) => {
+    const update = async ({ wallet }, forceFullUpdate = false) => {
         // const ms = new Date().getTime();
         // console.log(`update.${ms}`);
         // console.time(`update.${ms}`);
@@ -117,7 +117,7 @@ const useWallet = () => {
             const utxosHaveChanged = !isEqual(utxosBcash, wallet?.state?.utxos);
 
             // If the utxo set has not changed,
-            if (!utxosHaveChanged) {
+            if (!utxosHaveChanged && !forceFullUpdate) {
                 // remove api error here; otherwise it will remain if recovering from a rate
                 // limit error with an unchanged utxo set
                 setApiError(false);
@@ -895,12 +895,12 @@ const useWallet = () => {
         }
     }
 
-    const forceWalletUpdate = async () => {
+    const forceWalletUpdate = async (forceFullUpdate = false) => {
         console.log("forcing wallet update");
         const wallet = await getWallet();
         update({
             wallet,
-        }).finally(() => {
+        }, forceFullUpdate).finally(() => {
             setLoading(false);
         });
     }

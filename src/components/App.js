@@ -60,7 +60,16 @@ const GlobalStyle = createGlobalStyle`
         color: ${props => props.theme.primary};
         transition: color 0.3s;
         background-color: ${props => props.theme.modals.buttons.background};
-    }   
+    }
+    
+    .ant-spin-text {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-weight: bold;
+        margin-top: 40px;
+        font-size: 16px;
+        color: ${props => props.theme.wallet.text.secondary};
+    }
+
     .selectedCurrencyOption {
         text-align: left;
         color: ${props => props.theme.wallet.text.secondary} !important;
@@ -262,6 +271,7 @@ const App = () => {
                     loading || loadingUtxosAfterSend || (wallet && !validWallet)
                 }
                 indicator={CashLoadingIcon}
+                tip={typeof loadingUtxosAfterSend === "string" ? loadingUtxosAfterSend : ""}
             >
                 <CustomApp>
                     <WalletBody>

@@ -240,6 +240,9 @@ const Checkout = ({ passLoadingStatus }) => {
                 window.history.replaceState(null, '', window.location.origin);
                 return history.push(`/wallet`);
             }
+        } else {
+            passLoadingStatus(false);
+            return history.push('/wallet');
         }
         setPrInfoFromUrl(prInfo);
         prInfo.paymentDetails.type = prInfo.type;
@@ -353,7 +356,7 @@ const Checkout = ({ passLoadingStatus }) => {
 
     }
 
-    async function send() {
+    async function send(rawChainTxs) {
         setFormData({
             ...formData,
             dirty: false,
@@ -370,7 +373,7 @@ const Checkout = ({ passLoadingStatus }) => {
         // Track number of XEC BIP70 transactions
         Event('SendBip70.js', 'SendBip70', type);
 
-        passLoadingStatus(true);
+        passLoadingStatus("Please wait while your transaction is broadcast");
 
         try {
             // Send transaction
@@ -378,7 +381,9 @@ const Checkout = ({ passLoadingStatus }) => {
                 wallet,
                 paymentDetails,
                 currency.defaultFee,
-                false // testOnly
+                false, // testOnly
+                false, // isPreburn
+                rawChainTxs
             );
             if (type == 'ecash')
                 sendTokenNotification(link);
@@ -394,6 +399,10 @@ const Checkout = ({ passLoadingStatus }) => {
                 }
             }
 
+            // If doing a chain, force full wallet update
+            // UTXOs may not change (ie. in a mint chain)
+            if (rawChainTxs)
+                forceWalletUpdate(true);
             // Sleep for 3 seconds and then 
             await sleep(3000);
             // Manually disable loading
@@ -434,19 +443,26 @@ const Checkout = ({ passLoadingStatus }) => {
         // Track number of XEC BIP70 transactions
         Event('SelfMint.js', 'SelfMint', authCodeB64);
 
-        passLoadingStatus(true);
+        passLoadingStatus("Please wait while your tokens are minted");
+
+        const doChainedMint = Number(tokenFormattedBalance) === 0;
 
         try {
             // Send transaction
-            await sendSelfMint(
+            const rawMintTx = await sendSelfMint(
                 wallet,
                 tokenId,
                 authCodeB64,
-                false // testOnly
+                false, // testOnly
+                doChainedMint
             );
 
-            selfMintTokenNotification();
             setTokensMinted(true);
+            
+            if (doChainedMint)
+                return send([rawMintTx])
+
+            selfMintTokenNotification();
             // Sleep for 10 seconds and then 
             // await sleep(10000);
             forceWalletUpdate();

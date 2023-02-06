@@ -1089,7 +1089,8 @@ export default function useBCH() {
         paymentDetails, // b70.PaymentDetails
         feeInSatsPerByte,
         testOnly = false,
-        isPreburn = false
+        isPreburn = false,
+        rawChainTxs = [] // All outputs for this wallet address in last TX will be used
     ) => {
         // Get change address from sending utxos
         // fall back to what is stored in wallet
@@ -1106,13 +1107,34 @@ export default function useBCH() {
         // Check to see if this is an SLP/eToken transaction
         const firstOutput = paymentDetails.outputs[0]
         console.log('paymentDetails', paymentDetails);
-        console.log('paymentDetails.outputs', paymentDetails.outputs);
+        // console.log('paymentDetails.outputs', paymentDetails.outputs);
         const slpScript = SLP.fromRaw(Buffer.from(firstOutput.script));
         const isSlp = slpScript.isValidSlp();
         let postagePaid = false;
         const tokenCoins = [];
-        // If is Slp, 
-        if (isSlp) {
+        // If is SLP; use a label to break
+        slpCondition: if (isSlp) {
+
+            const tokenIdBuf = slpScript.getData(4);
+            const tokenId = tokenIdBuf.toString('hex');
+
+            // Is Postage Paid by Merchant?
+            const merchantData = paymentDetails.getData('json');
+            // console.log('merchantData', merchantData)
+            // console.log('typeof merchantData', typeof merchantData)
+            if (typeof merchantData === "object" && merchantData.postage) {
+                const stamps = merchantData.postage.stamps;
+                const listing = stamps.find(stamp => stamp.tokenId == tokenId);
+                // If postage is paid don't use native token funding
+                if (listing && listing.rate == 0) {
+                    postagePaid = true;
+                }
+            }
+            console.log('postagePaid', postagePaid);
+
+            // If is a chained transaction, leave this conditional
+            if (rawChainTxs.length > 0)
+                break slpCondition;
 
             // Throw error if transaction type is not SEND
             const slpType = slpScript.getType();
@@ -1120,8 +1142,6 @@ export default function useBCH() {
                 throw new Error(`Token ${slpType} transactions not supported`);
 
             // Get required UTXOs
-            const tokenIdBuf = slpScript.getData(4);
-            const tokenId = tokenIdBuf.toString('hex');
             const sendRecords = slpScript.getRecords(tokenIdBuf);
             const totalBase = sendRecords.reduce((total, record) => {
                 return total.add(U64.fromBE(Buffer.from(record.value)));
@@ -1252,20 +1272,6 @@ export default function useBCH() {
                 }
             }
 
-            // Is Postage Paid by Merchant?
-            const merchantData = paymentDetails.getData('json');
-            console.log('merchantData', merchantData)
-            console.log('typeof merchantData', typeof merchantData)
-            if (typeof merchantData === "object" && merchantData.postage) {
-                const stamps = merchantData.postage.stamps;
-                const listing = stamps.find(stamp => stamp.tokenId == tokenId);
-                // If postage is paid don't use native token funding
-                if (listing && listing.rate == 0) {
-                    postagePaid = true;
-                }
-            }
-            console.log('postagePaid', postagePaid);
-
             // Handle error of user having no BCH and postage not paid
             if (!postagePaid && slpBalancesAndUtxos.nonSlpUtxos.length === 0) {
                 throw new Error(
@@ -1284,7 +1290,19 @@ export default function useBCH() {
             tx.addOutput(paymentDetails.outputs[i]);
         }
 
-        if (postagePaid) {
+        if (rawChainTxs.length > 0) {
+            if (postagePaid)
+                sigHashType = Script.hashType.ANYONECANPAY | sigHashType;
+            // Use all outputs of final raw chained Tx
+            const parentTx = TX.fromRaw(rawChainTxs[rawChainTxs.length -1]);
+            for (let i = 0; i < parentTx.outputs.length; i++) {
+                const address = parentTx.outputs[i].getAddress()?.toString()
+                if (address === REMAINDER_ADDR) {
+                    const coin = Coin.fromTX(parentTx, i, -1);
+                    tx.addCoin(coin);
+                }
+            }
+        } else if (postagePaid) {
             // Postage Protocol requires ANYONECANPAY
             sigHashType = Script.hashType.ANYONECANPAY | sigHashType;
 
@@ -1315,9 +1333,15 @@ export default function useBCH() {
         const hex = rawTx.toString('hex');
         console.log('hex', hex);
 
+        // Add on any 
+        const rawTxs = [
+            ...rawChainTxs,
+            rawTx
+        ]
+
         const paymentObj = {
             merchantData: Buffer.alloc(0),
-            transactions: [rawTx],
+            transactions: rawTxs,
             refundTo:[{
                 script: refundOutput.script.toRaw(),
                 value: 0
@@ -1381,7 +1405,8 @@ export default function useBCH() {
         wallet,
         tokenId, // Buffer
         authCode,
-        testOnly = false
+        testOnly = false,
+        returnRawTx = false
     ) => {
         try {
             const tokenIdString = tokenId.toString('hex');
@@ -1481,7 +1506,8 @@ export default function useBCH() {
                 tx.inputs[i].script.fromItems(items);
             }
 
-            const hex = tx.toRaw().toString('hex')
+            const rawTx = tx.toRaw()
+            const hex = rawTx.toString('hex')
 
             // Verify
             // const mintMsgBuf = Buffer.concat([
@@ -1505,6 +1531,9 @@ export default function useBCH() {
 
             if (!verified)
                 throw new Error('Transaction verification failed');
+
+            if (returnRawTx)
+                return rawTx;
         
             // Broadcast transaction to the network
             let broadcast = {success: true};
