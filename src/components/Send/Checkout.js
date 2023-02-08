@@ -111,6 +111,7 @@ const Checkout = ({ passLoadingStatus }) => {
     const [isSending, setIsSending] = useState(false);
 
     const [tokensMinted, setTokensMinted] = useState(false);
+    const [tokensSent, setTokensSent] = useState(false);
     const [purchaseTokenAmount, setPurchaseTokenAmount] = useState(0);
 
     // Postage Protocol Check (for BURN)
@@ -399,12 +400,13 @@ const Checkout = ({ passLoadingStatus }) => {
                 }
             }
 
+            setTokensSent(true)
             // If doing a chain, force full wallet update
             // UTXOs may not change (ie. in a mint chain)
             if (rawChainTxs)
-                forceWalletUpdate(true);
-            // Sleep for 3 seconds and then 
-            await sleep(3000);
+                await forceWalletUpdate(true);
+            else
+                await sleep(3000);
             // Manually disable loading
             passLoadingStatus(false);
             // Return to main wallet screen
@@ -445,7 +447,9 @@ const Checkout = ({ passLoadingStatus }) => {
 
         passLoadingStatus("Please wait while your tokens are minted");
 
-        const doChainedMint = Number(tokenFormattedBalance) === 0;
+        //const doChainedMint = Number(tokenFormattedBalance) === 0;
+        // default to always doing a chained mint here, don't show SEND button
+        const doChainedMint = true;
 
         try {
             // Send transaction
@@ -458,7 +462,7 @@ const Checkout = ({ passLoadingStatus }) => {
             );
 
             setTokensMinted(true);
-            
+
             if (doChainedMint)
                 return send([rawMintTx])
 
@@ -734,7 +738,7 @@ const Checkout = ({ passLoadingStatus }) => {
 					<>{!tokensMinted ? <PayPalSection /> : <Spin spinning={true} indicator={CashLoadingIcon}></Spin>}</>
 				) : (
                     <>
-                        {isSending ? <Spin spinning={true} indicator={CashLoadingIcon}></Spin> :
+                        {isSending || tokensSent ? <Spin spinning={true} indicator={CashLoadingIcon}></Spin> :
                         <PrimaryButton onClick={() => handleOk()}>Send</PrimaryButton>}
                     </>
 				)}

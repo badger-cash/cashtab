@@ -1155,10 +1155,39 @@ export default function useBCH() {
                 throw new Error ('Insufficient token balance to complete transaction');
 
             const tokenUtxos = [];
+            
+            // Add utxos from chained parent if present
+            if (rawChainTxs.length > 0) {
+                // If a chain TX is provided, use it for the input coins
+                const parentTx = TX.fromRaw(rawChainTxs[rawChainTxs.length -1]);
+                // Parse SLP script
+                const slpScript = script.SLP.fromRaw(parentTx.outputs[0].script.toRaw())
+                const records = slpScript.getRecords(Buffer.alloc(32))
+                // Iterate through parentTx outputs
+                for (let i = 0; i < parentTx.outputs.length; i++) {
+                    const address = parentTx.outputs[i].getAddress()?.toString()
+                    if (address === REMAINDER_ADDR) {
+                        const record = records.find(r => r.type !== 'BATON' && r.vout === i)
+                        if (record) {
+                            // convert to coin first for compatibility
+                            const coin = Coin.fromTX(parentTx, i, -1);
+                            coin.slp = record;
+                            const utxo = coin.toJSON();
+                            // Add UTXO
+                            tokenUtxos.push(utxo)
+                        }
+                    }
+                }
+            
+            }
+
             if (slpType === 'BURN' && !isPreburn) {
                 // Send up preburn split transaction
                 // Postage will be added and it will be cached on server
                 // Use UTXO from response as input UTXO for burn
+
+                // Clear utxo array in case rawChainTxs is present
+                tokenUtxos.length = 0;
 
                 // First clone payment details to use with split tx
                 const splitDetails = PaymentDetails.fromOptions(
@@ -1214,28 +1243,6 @@ export default function useBCH() {
                       }
                 });
 
-            } else if (rawChainTxs.length > 0) {
-                // If a chain TX is provided, use it for the input coins
-                const parentTx = TX.fromRaw(rawChainTxs[rawChainTxs.length -1]);
-                // Parse SLP script
-                const slpScript = script.SLP.fromRaw(parentTx.outputs[0].script.toRaw())
-                const records = slpScript.getRecords(Buffer.alloc(32))
-                // Iterate through parentTx outputs
-                for (let i = 0; i < parentTx.outputs.length; i++) {
-                    const address = parentTx.outputs[i].getAddress()?.toString()
-                    if (address === REMAINDER_ADDR) {
-                        const record = records.find(r => r.type !== 'BATON' && r.vout === i)
-                        if (record) {
-                            // convert to coin first for compatibility
-                            const coin = Coin.fromTX(parentTx, i, -1);
-                            coin.slp = record;
-                            const utxo = coin.toJSON();
-                            // Add UTXO
-                            tokenUtxos.push(utxo)
-                        }
-                    }
-                }
-            
             } else {
                 // Use available UTXOS in wallet
                 const availableTokenUtxos = slpBalancesAndUtxos.slpUtxos.filter(
