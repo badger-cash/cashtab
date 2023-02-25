@@ -108,8 +108,10 @@ const Checkout = ({ passLoadingStatus }) => {
 
     // Show a confirmation modal on transactions created by populating form from web page button
     const [isModalVisible, setIsModalVisible] = useState(false);
+    const [isSending, setIsSending] = useState(false);
 
     const [tokensMinted, setTokensMinted] = useState(false);
+    const [tokensSent, setTokensSent] = useState(false);
     const [purchaseTokenAmount, setPurchaseTokenAmount] = useState(0);
 
     // Postage Protocol Check (for BURN)
@@ -126,7 +128,8 @@ const Checkout = ({ passLoadingStatus }) => {
     };
 
     const handleOk = () => {
-        setIsModalVisible(false);
+        // setIsModalVisible(false);
+        setIsSending(true);
         send();
     };
 
@@ -238,6 +241,9 @@ const Checkout = ({ passLoadingStatus }) => {
                 window.history.replaceState(null, '', window.location.origin);
                 return history.push(`/wallet`);
             }
+        } else {
+            passLoadingStatus(false);
+            return history.push('/wallet');
         }
         setPrInfoFromUrl(prInfo);
         prInfo.paymentDetails.type = prInfo.type;
@@ -351,7 +357,7 @@ const Checkout = ({ passLoadingStatus }) => {
 
     }
 
-    async function send() {
+    async function send(rawChainTxs) {
         setFormData({
             ...formData,
             dirty: false,
@@ -368,7 +374,7 @@ const Checkout = ({ passLoadingStatus }) => {
         // Track number of XEC BIP70 transactions
         Event('SendBip70.js', 'SendBip70', type);
 
-        passLoadingStatus(true);
+        passLoadingStatus("Please wait while your transaction is broadcast");
 
         try {
             // Send transaction
@@ -376,7 +382,9 @@ const Checkout = ({ passLoadingStatus }) => {
                 wallet,
                 paymentDetails,
                 currency.defaultFee,
-                false // testOnly
+                false, // testOnly
+                false, // isPreburn
+                rawChainTxs
             );
             if (type == 'ecash')
                 sendTokenNotification(link);
@@ -392,8 +400,13 @@ const Checkout = ({ passLoadingStatus }) => {
                 }
             }
 
-            // Sleep for 3 seconds and then 
-            await sleep(3000);
+            setTokensSent(true)
+            // If doing a chain, force full wallet update
+            // UTXOs may not change (ie. in a mint chain)
+            if (rawChainTxs)
+                await forceWalletUpdate(true);
+            else
+                await sleep(3000);
             // Manually disable loading
             passLoadingStatus(false);
             // Return to main wallet screen
@@ -432,23 +445,33 @@ const Checkout = ({ passLoadingStatus }) => {
         // Track number of XEC BIP70 transactions
         Event('SelfMint.js', 'SelfMint', authCodeB64);
 
-        passLoadingStatus(true);
+        passLoadingStatus("Please wait while your tokens are minted");
+
+        //const doChainedMint = Number(tokenFormattedBalance) === 0;
+        // default to always doing a chained mint here, don't show SEND button
+        const doChainedMint = true;
 
         try {
             // Send transaction
-            await sendSelfMint(
+            const rawMintTx = await sendSelfMint(
                 wallet,
                 tokenId,
                 authCodeB64,
-                false // testOnly
+                false, // testOnly
+                doChainedMint
             );
 
-            selfMintTokenNotification();
             setTokensMinted(true);
+
+            if (doChainedMint)
+                return send([rawMintTx])
+
+            selfMintTokenNotification();
             // Sleep for 10 seconds and then 
             // await sleep(10000);
+            forceWalletUpdate();
             // Manually disable loading
-            return passLoadingStatus(false);
+            return passLoadingStatus(true);
             // return window.location.reload();
         } catch (e) {
             handleSendXecError(e, authCodeB64);
@@ -500,7 +523,7 @@ const Checkout = ({ passLoadingStatus }) => {
         }
     }
 
-    const feeAmount = (.50 + (purchaseTokenAmount * .05)).toFixed(2); // Add 50 cent fixed fee
+    const feeAmount = (.50 + (purchaseTokenAmount * .06)).toFixed(2); // Add 50 cent fixed fee to 6% percentage
     const totalAmount = (Number(purchaseTokenAmount) + Number(feeAmount)).toFixed(2);
 
     const PayPalSection = () => {
@@ -591,6 +614,10 @@ const Checkout = ({ passLoadingStatus }) => {
     const displayTicker = formData.token?.ticker || currency.ticker;
     const { invoice, merchant_name, offer_description, offer_name } = prInfoFromUrl.paymentDetails?.merchantDataJson?.ipn_body || {};
     const isStage1 = !checkSufficientFunds() || apiError || sendBchAmountError || sendBchAddressError || !prInfoFromUrl;
+    // For making SEND button available
+    if (!isStage1) {
+        passLoadingStatus(false);
+    }
 
     return (
         <>
@@ -708,9 +735,23 @@ const Checkout = ({ passLoadingStatus }) => {
 
             <Form>            
                 {isStage1 ? (
-					<>{!tokensMinted ? <PayPalSection /> : <Spin spinning={true} indicator={CashLoadingIcon}></Spin>}</>
+					<>
+                    {!tokensMinted ? 
+                        <>
+                            <p className="text-muted">
+                                By making this purchase you agree to the
+                                <a target="_blank" rel="noopener noreferrer" href="https://bux.digital/tos.html"> Terms Of Service</a>
+                            </p>
+                            <PayPalSection />
+                        </>
+                        : <Spin spinning={true} indicator={CashLoadingIcon}></Spin>
+                    }
+                    </>
 				) : (
-					<PrimaryButton onClick={() => showModal()}>Send</PrimaryButton>
+                    <>
+                        {isSending || tokensSent ? <Spin spinning={true} indicator={CashLoadingIcon}></Spin> :
+                        <PrimaryButton onClick={() => handleOk()}>Send</PrimaryButton>}
+                    </>
 				)}
 
 				{apiError && <ApiError />}
