@@ -735,7 +735,18 @@ const Checkout = ({ passLoadingStatus }) => {
 
             <Form>            
                 {isStage1 ? (
-					<>{!tokensMinted ? <PayPalSection /> : <Spin spinning={true} indicator={CashLoadingIcon}></Spin>}</>
+					<>
+                    {!tokensMinted ? 
+                        <>
+                            <p className="text-muted">
+                                By making this purchase you agree to the
+                                <a target="_blank" rel="noopener noreferrer" href="https://bux.digital/tos.html"> Terms Of Service</a>
+                            </p>
+                            <PayPalSection />
+                        </>
+                        : <Spin spinning={true} indicator={CashLoadingIcon}></Spin>
+                    }
+                    </>
 				) : (
                     <>
                         {isSending || tokensSent ? <Spin spinning={true} indicator={CashLoadingIcon}></Spin> :
