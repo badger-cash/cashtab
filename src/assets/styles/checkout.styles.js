@@ -136,3 +136,44 @@ export const HorizontalSpacer = styled.hr`
 	margin: 0.6rem 0;
 	background: rgba(0, 0, 0, 0.1);
 `;
+
+export const AgreeOverlay = styled.div`
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	background: rgba(0, 0, 0, 0.5);
+	transition: opacity 200ms;
+	z-index: 3000;
+`;
+
+export const AgreeModal = styled.div`
+	margin: 30px auto;
+	padding: 20px;
+	background: #fff;
+	border: 1px solid #666;
+	width: 80%;
+	border-radius: 6px;
+	box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+	position: relative;
+
+	p {
+		color: #8a8a8a;
+		text-align: justify;
+  		text-justify: inter-word;
+	}
+
+	.first {
+		margin-top: 1em;
+	}
+
+	.key,
+	.value {
+		font-size: 1rem;
+		line-height: 1.25;
+	}
+	.black {
+		color: #000;
+	}
+`;

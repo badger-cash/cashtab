@@ -50,6 +50,8 @@ import {
 	ListItem,
 	CheckoutIcon,
 	HorizontalSpacer,
+    AgreeOverlay,
+    AgreeModal,
 } from "../../assets/styles/checkout.styles";
 
 
@@ -109,6 +111,8 @@ const Checkout = ({ passLoadingStatus }) => {
     // Show a confirmation modal on transactions created by populating form from web page button
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [isSending, setIsSending] = useState(false);
+
+    const [hasAgreed, setHasAgreed] = useState(false);
 
     const [tokensMinted, setTokensMinted] = useState(false);
     const [tokensSent, setTokensSent] = useState(false);
@@ -733,29 +737,48 @@ const Checkout = ({ passLoadingStatus }) => {
                 )}
 			</CheckoutStyles>
 
-            <Form>            
+                <Form>            
                 {isStage1 ? (
-					<>
-                    {!tokensMinted ? 
-                        <>
-                            <p className="text-muted">
-                                By making this purchase you agree to the
-                                <a target="_blank" rel="noopener noreferrer" href="https://bux.digital/tos.html"> Terms Of Service</a>
-                            </p>
-                            <PayPalSection />
-                        </>
-                        : <Spin spinning={true} indicator={CashLoadingIcon}></Spin>
-                    }
+                    <>
+                        { hasAgreed && (
+                            <>
+                            {!tokensMinted ? 
+                                <>
+                                    <p className="text-muted">
+                                        By making this purchase you agree to the
+                                        <a target="_blank" rel="noopener noreferrer" href="https://bux.digital/tos.html"> Terms Of Service</a>
+                                    </p>
+                                    <PayPalSection />
+                                </>
+                                : <Spin spinning={true} indicator={CashLoadingIcon}></Spin>
+                            }
+                            </>
+                        )}
                     </>
-				) : (
+                ) : (
                     <>
                         {isSending || tokensSent ? <Spin spinning={true} indicator={CashLoadingIcon}></Spin> :
                         <PrimaryButton onClick={() => handleOk()}>Send</PrimaryButton>}
                     </>
-				)}
+                )}
 
-				{apiError && <ApiError />}
+                {apiError && <ApiError />}
             </Form>
+
+            { !hasAgreed && isStage1 &&
+                <AgreeOverlay>
+                    <AgreeModal>
+                        <Heading>You are about to purchase a BUX Self-Mint Authorization Code</Heading>
+                        <HorizontalSpacer />
+                        <span className="key black">To proceed you must agree to the following:</span>
+                        <p className=" first">1. The seller of the digital good in this transaction is <a target="_blank" rel="noopener noreferrer" href="https://bux.digital">Badger LLC</a></p>
+                        <p>2. This purchase is for an authorization code ONLY. It is not a purchase of digital currency, credits on any third-party platform, or any other product or service</p>
+                        <p>3. This unhosted wallet, upon receiving the authorization code (after your PayPal/Credit Card payment is made), will mint and send BUX tokens to settle the payment request</p>
+                        <p>4. You have read and understand the BUX <a target="_blank" rel="noopener noreferrer" href="https://bux.digital/tos.html"> Terms Of Service</a></p>
+                        <PrimaryButton onClick={() => setHasAgreed(true)}>I Agree</PrimaryButton>
+                    </AgreeModal>
+                </AgreeOverlay>
+            }
         </>
     );
 };
