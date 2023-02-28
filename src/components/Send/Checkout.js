@@ -418,12 +418,15 @@ const Checkout = ({ passLoadingStatus }) => {
             return history.push(`/wallet`);
         } catch (e) {
             console.error(e)
-            // Retry send if response is 402 (mitigates stamp/baton race conditions)
-            if (e.cause.code === 402 && attempt < 3) {
-                const nextAttempt = attempt + 1
+            // Retry send if response is 402 or 404 (mitigates stamp/baton race conditions)
+            if ((e.cause.code === 402 || e.cause.code === 404) && attempt < 3) {
+                const nextAttempt = attempt + 1;
                 passLoadingStatus(`Payment unsuccessful. Retrying... (${nextAttempt}/3)`);
                 await sleep(2000);
-                return doSelfMint(authCodeB64, nextAttempt);
+                if (authCodeB64)
+                    return doSelfMint(authCodeB64, nextAttempt);
+                else
+                    return send(null, null, nextAttempt)
             } else {
                 const ticker = type == 'etoken' ?
                     currency.tokenTicker : currency.ticker;
