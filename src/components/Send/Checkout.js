@@ -361,7 +361,7 @@ const Checkout = ({ passLoadingStatus }) => {
 
     }
 
-    async function send(rawChainTxs) {
+    async function send(rawChainTxs, authCodeB64, attempt = 1) {
         setFormData({
             ...formData,
             dirty: false,
@@ -417,9 +417,18 @@ const Checkout = ({ passLoadingStatus }) => {
             window.history.replaceState(null, '', window.location.origin);
             return history.push(`/wallet`);
         } catch (e) {
-            const ticker = type == 'etoken' ?
-                currency.tokenTicker : currency.ticker;
-            handleSendXecError(e, ticker);
+            console.error(e)
+            // Retry send if response is 402 (mitigates stamp/baton race conditions)
+            if (e.cause.code === 402 && attempt < 3) {
+                const nextAttempt = attempt + 1
+                passLoadingStatus(`Payment unsuccessful. Retrying... (${nextAttempt}/3)`);
+                await sleep(2000);
+                return doSelfMint(authCodeB64, nextAttempt);
+            } else {
+                const ticker = type == 'etoken' ?
+                    currency.tokenTicker : currency.ticker;
+                handleSendXecError(e, ticker);
+            }
         }
         
         // Clear the address field
@@ -428,7 +437,7 @@ const Checkout = ({ passLoadingStatus }) => {
         passLoadingStatus(false);
     }
 
-    const doSelfMint = async (authCodeB64) => {
+    const doSelfMint = async (authCodeB64, attempt = 1) => {
         setFormData({
             ...formData,
             dirty: false,
@@ -468,7 +477,11 @@ const Checkout = ({ passLoadingStatus }) => {
             setTokensMinted(true);
 
             if (doChainedMint)
-                return send([rawMintTx])
+                return send(
+                    [rawMintTx],
+                    authCodeB64,
+                    attempt
+                )
 
             selfMintTokenNotification();
             // Sleep for 10 seconds and then 

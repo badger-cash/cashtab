@@ -67,10 +67,12 @@ const postAsArrayBuffer = (url, headers, body) => {
         req.onload = function(event) {
             let resp = req.response;
 
-            if (req.status === 400 || req.status === 404 || req.status === 500) {
+            if (req.status === 400 || req.status === 404 || req.status === 500 || req.status === 402) {
+                console.log(req)
                 reject(
                 new Error(
-                    `${req.status} Error processing payment, please check with the merchant and try again.`
+                    `Error processing payment, please check with the merchant and try again later.`,
+                    { cause: {code: req.status} }
                 )
                 );
                 return;
