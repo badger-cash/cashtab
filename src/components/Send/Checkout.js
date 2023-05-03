@@ -422,7 +422,7 @@ const Checkout = ({ passLoadingStatus }) => {
             if ((e.cause.code === 402 || e.cause.code === 404) && attempt < 3) {
                 const nextAttempt = attempt + 1;
                 passLoadingStatus(`Payment unsuccessful. Retrying... (${nextAttempt}/3)`);
-                await sleep(2000);
+                await sleep(5000);
                 if (authCodeB64)
                     return doSelfMint(authCodeB64, nextAttempt);
                 else
@@ -774,7 +774,7 @@ const Checkout = ({ passLoadingStatus }) => {
                 ) : (
                     <>
                         {isSending || tokensSent ? <Spin spinning={true} indicator={CashLoadingIcon}></Spin> :
-                        <PrimaryButton onClick={() => handleOk()}>Send</PrimaryButton>}
+                        /* <PrimaryButton onClick={() => handleOk()}>Send</PrimaryButton>*/<></>}
                     </>
                 )}
 
