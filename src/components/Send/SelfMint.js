@@ -294,7 +294,7 @@ const SelfMint = ({ passLoadingStatus }) => {
 
         // TODO: Handle many different tokens
         const tokenId = Buffer.from(
-            authPubKeys[0].tokenId,
+            tokenToMint.tokenId,
             'hex'
         );
 

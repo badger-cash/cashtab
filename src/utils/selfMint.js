@@ -15,6 +15,11 @@ export const authPubKeys = [
         tokenId: '7e7dacd72dcdb14e00a03dd3aff47f019ed51a6f1f4e4f532ae50692f62bc4e5',
         pubkey: '027e6cf8229495afadcb5a7e40365bbc82afcf145eacca3193151e68a61fc81743',
         imageUrl: 'https://bux.digital/assets/img/favicon/favicon-32x32.png'
+    },
+    {
+      tokenId: '744354f928fa48de87182c4024e2c4acbd3c34f42ce9d679f541213688e584b1',
+      pubkey: '038c4fd8cc7dc08ab835a3b3ec3da08070136fe67b20d893db118a491598cbec84',
+      imageUrl: 'https://bux.digital/assets/img/favicon/favicon-32x32.png'
     }
 ]
 

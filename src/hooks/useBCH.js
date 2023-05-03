@@ -1455,7 +1455,7 @@ export default function useBCH() {
                 p2shAddress.toCashAddr()
             ]);
             const batonUtxo = batonAddrUtxos.find(u => 
-                u.slp.tokenId == tokenIdString && u.slp.type == 'BATON'
+                u.slp?.tokenId == tokenIdString && u.slp.type == 'BATON'
             );
 
             // Stub coin/utxo for "stamp" and baton

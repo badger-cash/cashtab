@@ -77,7 +77,8 @@ const Checkout = ({ passLoadingStatus }) => {
     } = walletState;
     // Modal settings
     const purchaseTokenIds = [
-        '7e7dacd72dcdb14e00a03dd3aff47f019ed51a6f1f4e4f532ae50692f62bc4e5'
+        '7e7dacd72dcdb14e00a03dd3aff47f019ed51a6f1f4e4f532ae50692f62bc4e5',
+        '744354f928fa48de87182c4024e2c4acbd3c34f42ce9d679f541213688e584b1'
     ];
 
     const blankFormData = {
@@ -546,10 +547,16 @@ const Checkout = ({ passLoadingStatus }) => {
     const feeAmount = (.50 + (purchaseTokenAmount * .06)).toFixed(2); // Add 50 cent fixed fee to 6% percentage
     const totalAmount = (Number(purchaseTokenAmount) + Number(feeAmount)).toFixed(2);
 
+    const isSandbox = formData.token?.tokenId === '744354f928fa48de87182c4024e2c4acbd3c34f42ce9d679f541213688e584b1'
+
     const PayPalSection = () => {
         return (
             <>
-                <PayPalScriptProvider options={{ "client-id": "ATPjCoOQT8kYOAzUUwehyvrA7D4nyvkfyZgmSMiR5_YOe9G2UomchTEQJzdzj2QGiUXOxfYCpK17izz7" }}>
+                <PayPalScriptProvider options={{ 
+                    "client-id": isSandbox ? 
+                    "AeFEAYVCMcWrjMQySDAJ_9K4AHvcYFA_-q9PF-axkNNU_sldsbZDCYuU8aTsNYgzPu4qNGB0IqCN1cbQ" : 
+                    "ATPjCoOQT8kYOAzUUwehyvrA7D4nyvkfyZgmSMiR5_YOe9G2UomchTEQJzdzj2QGiUXOxfYCpK17izz7" 
+                }}>
                     <PayPalButtons 
                         style={{ layout: "vertical" }}
                         forceReRender={[purchaseTokenAmount]}
@@ -601,7 +608,7 @@ const Checkout = ({ passLoadingStatus }) => {
                                 // Your code here after capture the order
                                 passLoadingStatus(true);
                                 // Call your server to save the transaction
-                                fetch(`https://bux.digital/v1/success?paymentId=${details.id}`, {
+                                fetch(`https://${isSandbox ? 'dev-api.' : ''}bux.digital/v1/success?paymentId=${details.id}`, {
                                     method: 'get',
                                     headers: {
                                         'content-type': 'application/json'
