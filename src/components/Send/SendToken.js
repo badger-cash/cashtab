@@ -436,6 +436,9 @@ const SendToken = ({ tokenId, passLoadingStatus }) => {
                                 <Descriptions.Item label="Document Hash">
                                     {token.info.hash}
                                 </Descriptions.Item>
+                                <Descriptions.Item label="Version">
+                                    {token.info.version}
+                                </Descriptions.Item>
                                 {tokenStats && (
                                     <>
                                         <Descriptions.Item label="Genesis Date">
