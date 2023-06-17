@@ -552,14 +552,14 @@ export default function useBCH() {
         return mintOpReturn
     };
 
-    const buildSendOpReturn = (tokenId, sendQuantityArray) => {
+    const buildSendOpReturn = (tokenId, sendQuantityArray, version = 1) => {
         const sendOpReturn = new Script()
                 .pushSym('return')
                 .pushData(Buffer.concat([
                     Buffer.from('SLP', 'ascii'),
                     Buffer.alloc(1)
                 ]))
-                .pushPush(Buffer.alloc(1, 1))
+                .pushPush(Buffer.alloc(1, version))
                 .pushData(Buffer.from('SEND', 'ascii'))
                 .pushData(Buffer.from(tokenId, 'hex'))
                 for (let i = 0; i < sendQuantityArray.length; i++) {
@@ -705,7 +705,7 @@ export default function useBCH() {
         const tokenInfo = slpBalancesAndUtxos.tokens.find(token => 
             token.tokenId == tokenId
         ).info;
-
+        console.log("tokenInfo", tokenInfo);
         // BEGIN transaction construction.
 
         const tx = new MTX();
@@ -755,7 +755,8 @@ export default function useBCH() {
 
         const sendOpReturn = buildSendOpReturn(
             tokenId,
-            tokenAmountArray
+            tokenAmountArray,
+            tokenInfo.version,
         );
 
         // Add OP_RETURN as first output.
