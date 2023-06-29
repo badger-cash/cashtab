@@ -114,7 +114,9 @@ const SelfMint = ({ passLoadingStatus }) => {
     const { 
         getBcashRestUrl, 
         sendSelfMint, 
+        sendSelfMintV2, 
         readAuthCode,
+        getTxBcash,
         getTxHistoryBcash,
         getUtxoBcash
      } = useBCH();
@@ -176,51 +178,65 @@ const SelfMint = ({ passLoadingStatus }) => {
 
     async function processAuthCode (authCode) {
         try {
-        const { mintQuantity, stampOutpoint } = readAuthCode(authCode);
-        const stampUtxo = await getUtxoBcash(
-            stampOutpoint.txid(),
-            stampOutpoint.index
-        )
-        if (!stampUtxo) {
-            // remove the mintauth parameter from the url
-            removeMintAuthParam(authCode);
-            return handleSendXecError(
-                new Error(`Invalid authorization code: UTXO in authcode does not exist`),
-                'MINT'
+            const { 
+                mintQuantity, 
+                stampOutpoint,
+                batonUtxo,
+                tokenId,
+                version
+            } = readAuthCode(authCode);
+            const outpointTocheck = stampOutpoint || batonUtxo;
+            const stampUtxo = await getUtxoBcash(
+                outpointTocheck.txid(),
+                outpointTocheck.index
             );
-        }
+            if (!stampUtxo) {
+                // remove the mintauth parameter from the url
+                removeMintAuthParam(authCode);
+                return handleSendXecError(
+                    new Error(`Invalid authorization code: UTXO in authcode does not exist`),
+                    'MINT'
+                );
+            }
 
-        const stampTxs = await getTxHistoryBcash(
-            [stampUtxo.address],
-            10,
-            false
-        );
-        const genesisTx = stampTxs.find(tx => 
-            authPubKeys.find(authObj => 
-                authObj.tokenId == tx.slpToken?.tokenId
-            )
-        );
-        if (!genesisTx) {
-            // remove the mintauth parameter from the url
+            let genesisTx;
+
+            if (version === 1) {
+                const stampTxs = await getTxHistoryBcash(
+                    [stampUtxo.address],
+                    10,
+                    false
+                );
+                genesisTx = stampTxs.find(tx => 
+                    authPubKeys.find(authObj => 
+                        authObj.tokenId == tx.slpToken?.tokenId
+                    )
+                );
+            } else {
+                genesisTx = await getTxBcash(tokenId.toString('hex'))
+            }
+            if (!genesisTx) {
+                // remove the mintauth parameter from the url
+                removeMintAuthParam(authCode);
+                return handleSendXecError(
+                    new Error(`Invalid authorization code: Authcode is for unsupported self-mint token`),
+                    'MINT'
+                );
+            }
+
+            const mintQtyString = U64
+                .fromBE(mintQuantity)
+                .toInt() / (10 ** genesisTx.slpToken.decimals);
+
+            setTokenToMint({
+                ...genesisTx.slpToken,
+                mintQuantity: mintQtyString
+            })
+            setAuthCodeB64(authCode);
+            // remove mintauth url parameter if present
             removeMintAuthParam(authCode);
-            return handleSendXecError(
-                new Error(`Invalid authorization code: Authcode is for unsupported self-mint token`),
-                'MINT'
-            );
-        }
-
-        const mintQtyString = U64
-            .fromBE(mintQuantity)
-            .toInt() / (10 ** genesisTx.slpToken.decimals);
-
-        setTokenToMint({
-            ...genesisTx.slpToken,
-            mintQuantity: mintQtyString
-        })
-        setAuthCodeB64(authCode);
-        // remove mintauth url parameter if present
-        removeMintAuthParam(authCode);
         } catch (err) {
+            console.log(err)
            // remove the mintauth parameter from the url
            removeMintAuthParam(authCode);
            return handleSendXecError(
@@ -305,13 +321,24 @@ const SelfMint = ({ passLoadingStatus }) => {
         passLoadingStatus(true);
 
         try {
+            const { 
+                version
+            } = readAuthCode(authCodeB64);
             // Send transaction
-            await sendSelfMint(
-                wallet,
-                tokenId,
-                authCodeB64,
-                false // testOnly
-            );
+            if (version === 1) {
+                await sendSelfMint(
+                    wallet,
+                    tokenId,
+                    authCodeB64,
+                    false // testOnly
+                );
+            } else {
+                await sendSelfMintV2(
+                    wallet,
+                    authCodeB64,
+                    false // testOnly
+                );
+            }
 
             selfMintTokenNotification();
             // Sleep for 10 seconds and then 

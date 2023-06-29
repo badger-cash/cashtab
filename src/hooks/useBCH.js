@@ -20,6 +20,7 @@ import {
 import cashaddr from 'ecashaddrjs';
 import { U64 } from 'n64';
 import { 
+    Address,
     Input,
     Output,
     Outpoint,
@@ -245,6 +246,12 @@ export default function useBCH() {
             parsedTxHistory.push(parsedTx);
         }
         return parsedTxHistory;
+    };
+
+    const getTxBcash = async (txid) => {
+        return fetch(`${getBcashRestUrl()}/tx/${txid}?slp=true`)
+            .then(res => res.json())
+            .catch(err => null);
     };
 
     const getTxHistoryBcash = async (
@@ -1402,7 +1409,10 @@ export default function useBCH() {
     };
 
     const readAuthCode = (authCode) => {
-        const authReader = read(Buffer.from(authCode, 'base64'));
+        const authCodeBuf = Buffer.from(authCode, 'base64');
+        if (authCodeBuf.length > 300)
+            return readAuthCodeV2(authCode);
+        const authReader = read(authCodeBuf);
         const mintQuantity = authReader.readBytes(8);
         const stampRawOutpoint = authReader.readBytes(36);
         const stampOutpoint = Outpoint.fromRaw(stampRawOutpoint);
@@ -1410,8 +1420,50 @@ export default function useBCH() {
         const txAuthSig = authReader.readBytes(authReader.getSize() - authReader.offset);
 
         return {
+            version: 1,
             mintQuantity,
             stampOutpoint,
+            txAuthSig
+        }
+    }
+
+    const readAuthCodeV2 = (authCode) => {
+        const authCodeBuf = Buffer.from(authCode, 'base64');
+        const authReader = read(authCodeBuf);
+        const authPubKey = authReader.readBytes(33);
+        const serializedMerkleProof = authReader.readBytes(33 * 7);
+        const txAuthSig = authReader.readVarBytes();
+        const mintId = authReader.readBytes(6);
+        const minterPubKeyHash = authReader.readBytes(20);
+        const batonBuf = authReader.readBytes(36);
+        const batonUtxo = Outpoint.fromRaw(batonBuf);
+        const txSerializedOutputs = authReader.readBytes(authReader.getSize() - authReader.offset);
+        const outputsReader = read(txSerializedOutputs);
+        const txOutputs = [];
+        while (outputsReader.getSize() > outputsReader.offset) {
+            txOutputs.push(Output.fromReader(outputsReader))
+        }
+        // Get token ID and mint quantity
+    const tokenId = txOutputs[0].script.getData(4);
+    const mintQuantity = U64.fromNumber(0);
+    const slpOutputs = txOutputs[0].script.code.slice(5);
+    for (let i = 0; i < slpOutputs.length; i++) {
+        const valueU64 = U64.fromBE(slpOutputs[i].toData());
+        mintQuantity.iadd(valueU64);
+    }
+
+    return {
+        version: 2,
+        tokenId,
+        mintQuantity: mintQuantity.toBE(Buffer),
+            authCodeBuf,
+            authPubKey,
+            serializedMerkleProof,
+            mintId,
+            minterPubKeyHash,
+            batonUtxo,
+            txSerializedOutputs,
+            txOutputs,
             txAuthSig
         }
     }
@@ -1590,6 +1642,132 @@ export default function useBCH() {
         }
     }
 
+    const outscriptHexV2 = '01217f78aa7c517f01207f6b7c81637c687eaa6c5' +
+    '17f01207f6b7c81637c687eaa6c517f01207f6b7c81637c687eaa6c517f01207' +
+    'f6b7c81637c687eaa6c517f01207f6b7c81637c687eaa6c517f01207f6b7c816' +
+    '37c687eaa6c517f7c81637c687eaa202378b2a25b26ab248cd09a11b41f54452' +
+    'c4c8860fd1f7a835d13e784b1ac80be887c517f7c817f766b7bbb6c011a7f7c5' +
+    '67f5479a9887501247faa5279820128947f01207f757b8801447f7701247f758' +
+    '8a86f7b828c7f757c7bbb75ac';
+
+    const sendSelfMintV2 = async (
+        wallet,
+        authCode, // Base64
+        testOnly = false,
+        returnRawTx = false
+    ) => {
+        try {
+            // Process entered Auth Code string
+            const {
+                batonUtxo,
+                txOutputs,
+                authCodeBuf
+            } = readAuthCode(authCode);
+
+            // Find Baton
+            const batonFullUtxo = await getUtxoBcash(
+                batonUtxo.rhash(),
+                batonUtxo.index
+            );
+
+            // Baton coin
+            const batonCoin = Coin.fromJSON(batonFullUtxo);
+
+            const keyring = KeyRing.fromSecret(wallet.Path1899.fundingWif);
+            // Construct transaction
+            const tx = new TXUtil();
+            // Add outputs
+            tx.outputs = txOutputs;
+            // Add inputs (must be in this order)
+            tx.addCoin(batonCoin); // Input index 0: existing mint baton
+
+            const outScript = Script.fromRaw(Buffer.from(outscriptHexV2, 'hex'));
+
+            // Validation steps
+            const p2shAddr = Address.fromScripthash(outScript.hash160());
+            console.log(p2shAddr.toString())
+            console.log(batonFullUtxo.address)
+            if (p2shAddr.toString() !== batonFullUtxo.address)
+                throw new Error('Unsupported token. Invalid ScriptHash for baton')
+
+            const sigHashType = Script.hashType.ALL | Script.hashType.SIGHASH_FORKID;
+            const flags = Script.flags.STANDARD_VERIFY_FLAGS;
+
+            // Sign TX
+            tx.template(keyring); // prepares the template
+            const sig = tx.signature(0, outScript, batonCoin.value, keyring.privateKey, sigHashType, flags);
+            const preimage = tx.getPreimage(0, outScript, batonCoin.value, sigHashType, false);
+            const items = [
+                sig,
+                keyring.getPublicKey(),
+                Buffer.from(preimage.toString('hex'), 'hex'),
+                authCodeBuf.slice(264),
+                authCodeBuf.slice(0, 264),
+                outScript.toRaw()
+            ];
+            tx.inputs[0].script.fromItems(items);
+
+            const rawTx = tx.toRaw()
+            const hex = rawTx.toString('hex')
+
+            // Verify
+            // console.log('checking index 0');
+            // const checkBaton = tx.checkInput(0, stampCoin);
+            // console.log('checking index 1');
+            // const checkStamp = tx.checkInput(1, batonCoin);
+            const verified = tx.verify(tx.view);
+            
+            console.log('verified', verified);
+            console.log('tx size', tx.getSize());
+            console.log('fee', tx.getFee());
+            console.log('tx hex', hex);
+
+            if (!verified)
+                throw new Error('Transaction verification failed');
+
+            if (returnRawTx)
+                return rawTx;
+        
+            // Broadcast transaction to the network
+            let broadcast = {success: true};
+            if (!testOnly) {
+                broadcast = await broadcastTx(hex);
+                if (broadcast.error)
+                    throw broadcast.error
+            }
+
+            const txidStr = tx.txid().toString('hex')
+
+            if (broadcast.success) {
+                console.log(`${currency.tokenTicker} txid`, txidStr);
+            }
+            let link;
+            if (process.env.REACT_APP_NETWORK === `mainnet`) {
+                link = `${currency.tokenExplorerUrl}/tx/${txidStr}`;
+            } else {
+                link = `${currency.blockExplorerUrlTestnet}/tx/${txidStr}`;
+            }
+            //console.log(`link`, link);
+
+            return link;
+        } catch (err) {
+            if (err.error === 'insufficient priority (code 66)') {
+                err.code = SEND_BCH_ERRORS.INSUFFICIENT_PRIORITY;
+            } else if (err.error === 'txn-mempool-conflict (code 18)') {
+                err.code = SEND_BCH_ERRORS.DOUBLE_SPENDING;
+            } else if (err.error === 'Network Error') {
+                err.code = SEND_BCH_ERRORS.NETWORK_ERROR;
+            } else if (
+                err.error ===
+                'too-long-mempool-chain, too many unconfirmed ancestors [limit: 25] (code 64)'
+            ) {
+                err.code = SEND_BCH_ERRORS.MAX_UNCONFIRMED_TXS;
+            }
+            console.log(`error: `, err);
+            throw err;
+        }
+    }
+
     return {
         calcFee,
         getPostage,
@@ -1597,6 +1775,7 @@ export default function useBCH() {
         getUtxoBcash,
         getUtxosBcash,
         getSlpBalancesAndUtxosBcash,
+        getTxBcash,
         getTxHistoryBcash,
         parseTxData,
         parseTokenInfoForTxHistory,
@@ -1606,7 +1785,9 @@ export default function useBCH() {
         sendToken,
         sendBip70,
         readAuthCode,
+        readAuthCodeV2,
         sendSelfMint,
+        sendSelfMintV2,
         createToken,
     };
 }
