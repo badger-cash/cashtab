@@ -78,7 +78,8 @@ const Checkout = ({ passLoadingStatus }) => {
     // Modal settings
     const purchaseTokenIds = [
         '7e7dacd72dcdb14e00a03dd3aff47f019ed51a6f1f4e4f532ae50692f62bc4e5',
-        '744354f928fa48de87182c4024e2c4acbd3c34f42ce9d679f541213688e584b1'
+        '744354f928fa48de87182c4024e2c4acbd3c34f42ce9d679f541213688e584b1',
+        '4075459e0ac841f234bc73fc4fe46fe5490be4ed98bc8ca3f9b898443a5a381a'
     ];
 
     const blankFormData = {
@@ -152,7 +153,9 @@ const Checkout = ({ passLoadingStatus }) => {
         getBcashRestUrl, 
         sendBip70,
         sendSelfMint,
-        getPostage 
+        sendSelfMintV2,
+        getPostage,
+        readAuthCode
     } = useBCH();
 
     // If the balance has changed, unlock the UI
@@ -469,14 +472,27 @@ const Checkout = ({ passLoadingStatus }) => {
         const doChainedMint = true;
 
         try {
+            const { 
+                version
+            } = readAuthCode(authCodeB64);
             // Send transaction
-            const rawMintTx = await sendSelfMint(
-                wallet,
-                tokenId,
-                authCodeB64,
-                false, // testOnly
-                doChainedMint
-            );
+            let rawMintTx;
+            if (version === 1) {
+                rawMintTx = await sendSelfMint(
+                    wallet,
+                    tokenId,
+                    authCodeB64,
+                    false, // testOnly
+                    doChainedMint
+                );
+            } else {
+                rawMintTx = await sendSelfMintV2(
+                    wallet,
+                    authCodeB64,
+                    false, // testOnly
+                    doChainedMint
+                );
+            }
 
             setTokensMinted(true);
 
@@ -547,7 +563,11 @@ const Checkout = ({ passLoadingStatus }) => {
     const feeAmount = (.50 + (purchaseTokenAmount * .06)).toFixed(2); // Add 50 cent fixed fee to 6% percentage
     const totalAmount = (Number(purchaseTokenAmount) + Number(feeAmount)).toFixed(2);
 
-    const isSandbox = formData.token?.tokenId === '744354f928fa48de87182c4024e2c4acbd3c34f42ce9d679f541213688e584b1'
+    const isSandbox = purchaseTokenIds.slice(1).includes(formData.token?.tokenId);
+    const tokenTypeVersion = purchaseTokenIds.slice(2).includes(formData.token?.tokenId) ? 2 : 1;
+
+    const referenceId = tokenTypeVersion === 1 ? `${wallet.Path1899.slpAddress}-${purchaseTokenAmount}`
+        : `b70-${wallet.Path1899.slpAddress}-${prInfoFromUrl.url}`
 
     const PayPalSection = () => {
         return (
@@ -566,7 +586,7 @@ const Checkout = ({ passLoadingStatus }) => {
                                 .create({
                                     purchase_units: [
                                         {
-                                            reference_id: `${wallet.Path1899.slpAddress}-${purchaseTokenAmount}`,
+                                            reference_id: referenceId,
                                             description: `Self-Mint Auth Code (${purchaseTokenAmount} BUX Tokens)`,
                             
                                             custom_id: location.href,
@@ -608,7 +628,7 @@ const Checkout = ({ passLoadingStatus }) => {
                                 // Your code here after capture the order
                                 passLoadingStatus(true);
                                 // Call your server to save the transaction
-                                fetch(`https://${isSandbox ? 'dev-api.' : ''}bux.digital/v1/success?paymentId=${details.id}`, {
+                                fetch(`https://${isSandbox ? 'dev-api.' : ''}bux.digital/v${tokenTypeVersion}/success?paymentId=${details.id}`, {
                                     method: 'get',
                                     headers: {
                                         'content-type': 'application/json'
