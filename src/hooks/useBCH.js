@@ -38,6 +38,7 @@ import {
 } from 'bcrypto';
 import { read } from 'bufio';
 import { PaymentDetails } from 'b70';
+import { writeMempoolMint } from '@utils/mintHistory';
 
 const { 
     SLP,
@@ -405,6 +406,14 @@ export default function useBCH() {
             nonSlpUtxos,
             slpUtxos,
         };
+    };
+
+    const getMintHistory = async (minterPublicKey) => {
+        const mintHistory = await fetch(
+            `https://stats.bux.digital/api/mintsbypubkey/${minterPublicKey}`
+        ).then(res => res.json());
+
+        return mintHistory;
     };
 
     const broadcastTx = async (hex) => {
@@ -1443,6 +1452,28 @@ export default function useBCH() {
             txidStr = transactionIds[0];
 
             console.log(`${currency.tokenTicker} txid`, txidStr);
+            
+            if (isSlp) {
+                const possibleExternalMint = TX.fromRaw(paymentAck.payment.transactions[0]);
+                const slpScript = script.SLP.fromRaw(possibleExternalMint.outputs[0].script.toRaw())
+                const isMint = slpScript.getType() === 'MINT';
+                const isVersion2 = slpScript.getString(2, 'hex') == '02';
+                if (isMint && isVersion2) {
+                    const slpOutputs = slpScript.code.slice(5);
+                    let mintQuantity = U64.fromNumber(0);
+                    for (let i = 0; i < slpOutputs.length; i++) {
+                        const valueU64 = U64.fromBE(slpOutputs[i].toData());
+                        mintQuantity.iadd(valueU64);
+                    }
+                    await writeMempoolMint({
+                        txid: txidStr, 
+                        token_id: slpScript.getData(4).toString('hex'),
+                        block: -1,
+                        minter_pubkey: wallet.Path1899.publicKey,
+                        mint_total_amount: mintQuantity.toInt(),
+                    });                    
+                }
+            }
         }
 
         let link;
@@ -1826,6 +1857,7 @@ export default function useBCH() {
         getSlpBalancesAndUtxosBcash,
         getTxBcash,
         getTxHistoryBcash,
+        getMintHistory,
         parseTxData,
         parseTokenInfoForTxHistory,
         getBcashRestUrl,
