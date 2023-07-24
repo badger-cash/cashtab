@@ -35,6 +35,7 @@ import cashaddr from 'ecashaddrjs';
 import { getUrlFromQueryString } from '@utils/bip70';
 import { getPaymentRequest } from '../../utils/bip70';
 import { 
+    Output,
     Script,
     script
 } from 'bcash';
@@ -154,6 +155,8 @@ const Checkout = ({ passLoadingStatus }) => {
         sendBip70,
         sendSelfMint,
         sendSelfMintV2,
+        generateBurnTx,
+        getMintVaultAddress,
         getPostage,
         readAuthCode
     } = useBCH();
@@ -444,7 +447,7 @@ const Checkout = ({ passLoadingStatus }) => {
         passLoadingStatus(false);
     }
 
-    const doSelfMint = async (authCodeB64, attempt = 1) => {
+    const doSelfMint = async (authCodeB64, attempt = 1, rawBurnTx) => {
         setFormData({
             ...formData,
             dirty: false,
@@ -490,7 +493,8 @@ const Checkout = ({ passLoadingStatus }) => {
                     wallet,
                     authCodeB64,
                     false, // testOnly
-                    doChainedMint
+                    doChainedMint,
+                    rawBurnTx
                 );
             }
 
@@ -498,7 +502,10 @@ const Checkout = ({ passLoadingStatus }) => {
 
             if (doChainedMint)
                 return send(
-                    [rawMintTx],
+                    [
+                        ...rawBurnTx ? [rawBurnTx] : [], 
+                        rawMintTx
+                    ],
                     authCodeB64,
                     attempt
                 )
@@ -624,22 +631,37 @@ const Checkout = ({ passLoadingStatus }) => {
                                 });
                         }}
                         onApprove={(data, actions) => {
-                            return actions.order.capture().then(function (details) {
+                            return actions.order.capture().then(async (details) => {
                                 // Your code here after capture the order
-                                passLoadingStatus(true);
+                                passLoadingStatus('true');
+                                // Handle token/fiat split payment
+                                let burnTx;
+                                if (Number(tokenFormattedBalance) >= .01) {
+                                    passLoadingStatus('Adding existing wallet balance to payment...');
+                                    const mintVaultBatonOutput = new Output({
+                                        address: getMintVaultAddress(),
+                                        value: 5700
+                                    })
+                                    burnTx = await generateBurnTx(
+                                        wallet,
+                                        formData.token.tokenId,
+                                        [],
+                                        mintVaultBatonOutput
+                                    );
+                                }
+                                // console.log('burnTx', burnTx && burnTx.toString('hex'))
+                                passLoadingStatus('Fetching authorization code...');
                                 // Call your server to save the transaction
-                                fetch(`https://${isSandbox ? 'dev-api.' : ''}bux.digital/v${tokenTypeVersion}/success?paymentId=${details.id}`, {
+                                const response = await fetch(`https://${isSandbox ? 'dev-api.' : ''}bux.digital/v${tokenTypeVersion}/success?paymentId=${details.id}`, {
                                     method: 'get',
                                     headers: {
-                                        'content-type': 'application/json'
+                                        'content-type': 'application/json',
+                                        ...(burnTx) && ({'x-split-transaction': burnTx.toString('hex')})
                                     }
-                                })
-                                .then(response => {
-                                    return response.json();
-                                })
-                                .then(data => {
-                                    doSelfMint(data.authcode);
                                 });
+
+                                const data = await response.json();
+                                doSelfMint(data.authcode, 1, burnTx);
                             });
                         }}
                         onError={(err) => {

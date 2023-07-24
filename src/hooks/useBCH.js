@@ -576,6 +576,21 @@ export default function useBCH() {
         return sendOpReturn.compile();
     };
 
+    const buildBurnOpReturn = (tokenId, burnQuantity, version = 1) => {
+        const burnOpReturn = new Script()
+                .pushSym('return')
+                .pushData(Buffer.concat([
+                    Buffer.from('SLP', 'ascii'),
+                    Buffer.alloc(1)
+                ]))
+                .pushPush(Buffer.alloc(1, version))
+                .pushData(Buffer.from('BURN', 'ascii'))
+                .pushData(Buffer.from(tokenId, 'hex'))
+                .pushData(U64.fromString(burnQuantity).toBE(Buffer));
+
+        return burnOpReturn.compile();
+    };
+
     const createToken = async (
         wallet, 
         feeInSatsPerByte, 
@@ -1119,11 +1134,11 @@ export default function useBCH() {
         const slpScript = SLP.fromRaw(Buffer.from(firstOutput.script));
         const isSlp = slpScript.isValidSlp();
 
-        // Check to see if rawChainTxs is a single tx that satisfies the payment request
+        // Check to see if rawChainTxs satisfies the payment request
         let paymentObj;
         let txidStr;
-        if (rawChainTxs.length === 1) {
-            const tx = TX.fromRaw(rawChainTxs[0]);
+        if (rawChainTxs.length >= 1) {
+            const tx = TX.fromRaw(rawChainTxs[rawChainTxs.length - 1]);
             const txOutputs = tx.outputs.map(output => output.toJSON());
             const prOutputs = paymentDetails.outputs.map(output => {
                 return {
@@ -1699,11 +1714,18 @@ export default function useBCH() {
     '67f5479a9887501247faa5279820128947f01207f757b8801447f7701247f758' +
     '8a86f7b828c7f757c7bbb75ac';
 
+    const getMintVaultAddress = () => {
+        const outScriptHash = Hash160.digest(Buffer.from(outscriptHexV2, 'hex'));
+        const p2shPubKeyScript = Script.fromScripthash(outScriptHash);
+        return p2shPubKeyScript.getAddress();
+    }
+
     const sendSelfMintV2 = async (
         wallet,
         authCode, // Base64
         testOnly = false,
-        returnRawTx = false
+        returnRawTx = false,
+        rawBurnTx
     ) => {
         try {
             // Process entered Auth Code string
@@ -1714,13 +1736,19 @@ export default function useBCH() {
             } = readAuthCode(authCode);
 
             // Find Baton
-            const batonFullUtxo = await getUtxoBcash(
-                batonUtxo.rhash(),
-                batonUtxo.index
-            );
-
-            // Baton coin
-            const batonCoin = Coin.fromJSON(batonFullUtxo);
+            let batonCoin;
+            if (rawBurnTx) {
+                const burnTx = TXUtil.fromRaw(rawBurnTx);
+                batonCoin = Coin.fromTX(burnTx, 1, -1)
+            } else {
+                const batonFullUtxo = await getUtxoBcash(
+                    batonUtxo.rhash(),
+                    batonUtxo.index
+                );
+                // Baton coin
+                batonCoin = Coin.fromJSON(batonFullUtxo);
+            }
+            
 
             const keyring = KeyRing.fromSecret(wallet.Path1899.fundingWif);
             // Construct transaction
@@ -1734,9 +1762,7 @@ export default function useBCH() {
 
             // Validation steps
             const p2shAddr = Address.fromScripthash(outScript.hash160());
-            console.log(p2shAddr.toString())
-            console.log(batonFullUtxo.address)
-            if (p2shAddr.toString() !== batonFullUtxo.address)
+            if (p2shAddr.toString() !== batonCoin.getAddress().toString())
                 throw new Error('Unsupported token. Invalid ScriptHash for baton')
 
             const sigHashType = Script.hashType.ALL | Script.hashType.SIGHASH_FORKID;
@@ -1817,6 +1843,140 @@ export default function useBCH() {
         }
     }
 
+    const generateBurnTx = async (
+        wallet,
+        tokenId,
+        utxosToBurn = [],
+        batonOutput
+    ) => {
+
+        // If utxosToBurn are not provided, burn entire balance
+        if (utxosToBurn.length === 0) {
+            const slpBalancesAndUtxos = wallet.state.slpBalancesAndUtxos
+            const tokenUtxos = slpBalancesAndUtxos.slpUtxos.filter(
+                utxo => {
+                    if (
+                        utxo && // UTXO is associated with a token.
+                        utxo.slp.tokenId === tokenId && // UTXO matches the token ID.
+                        utxo.slp.type !== 'BATON' // UTXO is not a minting baton.
+                    ) {
+                        return true;
+                    }
+                    return false;
+                },
+            );
+
+            if (tokenUtxos.length === 0) {
+                throw new Error(
+                    'No token UTXOs for the specified token could be found.',
+                );
+            }
+
+            utxosToBurn.push(...tokenUtxos);
+        } else {
+            // Basic validity check on UTXOs supplied
+            const containsInvalidUtxos = utxosToBurn.some(
+                utxo => {
+                    if (
+                        !utxo?.slp || // UTXO isn't associated with a token.
+                        utxo.slp.tokenId != tokenId || // UTXO doesn't match the token ID.
+                        utxo.slp.type === 'BATON' // UTXO is a minting baton.
+                    ) { return true; }
+                    
+                    return false;
+                },
+            )
+
+            if (containsInvalidUtxos) {
+                throw new Error(
+                    'Invalid UTXOS provided for generateBurnTx.',
+                );
+            }
+        }
+
+        let burnQuantity = 0;
+        const coins = utxosToBurn.map(utxo => {
+            burnQuantity += parseInt(utxo.slp.value);
+            return Coin.fromJSON(utxo);
+        });
+
+        const tokenVersion = coins[0].slp.version
+        let tx = new TXUtil()// Build MINT OP_RETURN
+        const burnOpReturn = buildBurnOpReturn(
+            tokenId, 
+            `${burnQuantity}`, 
+            tokenVersion
+        );
+        // Add outputs
+        tx.addOutput(burnOpReturn, 0); // SLP burn OP_RETURN
+        // Add baton outpoint if included
+        if (batonOutput)
+            tx.addOutput(batonOutput);
+        for (let i = 0; i < coins.length; i++) {
+            tx.addCoin(coins[i]);
+        }
+        // Calculate if postage is needed
+        const estimatedTxSize = await tx.estimateSize();
+        const postageNeeded = estimatedTxSize > tx.getFee();
+
+        // Sign Tx
+        const keyRingArray = [
+            KeyRing.fromSecret(wallet.Path245.fundingWif),
+            KeyRing.fromSecret(wallet.Path145.fundingWif),
+            KeyRing.fromSecret(wallet.Path1899.fundingWif)
+        ];
+
+        // Set Sighash type
+        const hashTypes = Script.hashType;
+        const sighashType = postageNeeded
+            ? hashTypes.ALL | hashTypes.ANYONECANPAY | hashTypes.SIGHASH_FORKID
+            : hashTypes.ALL | hashTypes.SIGHASH_FORKID;
+
+        // Sign transaction
+        tx.sign(keyRingArray, sighashType);
+        const rawTx = tx.toRaw();
+        console.log('rawTx', rawTx.toString('hex'))
+
+        // Get postage if needed
+        if (postageNeeded) {
+            if (tokenVersion != 2) {
+                throw new Error(
+                    'Postage needed, but is only available for token type (version) 2.',
+                );
+            }
+
+            const refundScript = Script.fromPubkeyhash(keyRingArray[2].getKeyHash());
+
+            const paymentObj = {
+                merchantData: { returnRawTx: true },
+                transactions: [rawTx],
+                refundTo:[{
+                    script: refundScript.toRaw(),
+                    value: 0
+                }],
+                memo: ''
+            }
+
+            // Post transaction to the postage server. Response is unbroadcast tx
+            const paymentAck = await postPayment(
+                POSTAGE_URL,
+                paymentObj,
+                currency.tokenPrefixes[0]
+            );
+
+            if (paymentAck.payment) {
+                return paymentAck.payment.transactions[0];
+            } else {
+                throw new Error(
+                    'Error retreiving postage paid transaction.',
+                );
+            }
+
+        }
+
+        return rawTx;
+    }
+
     return {
         calcFee,
         getPostage,
@@ -1837,6 +1997,8 @@ export default function useBCH() {
         readAuthCodeV2,
         sendSelfMint,
         sendSelfMintV2,
+        getMintVaultAddress,
+        generateBurnTx,
         createToken,
     };
 }
