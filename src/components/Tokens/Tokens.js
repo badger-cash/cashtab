@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { useHistory } from 'react-router-dom';
 import { WalletContext } from '@utils/context';
@@ -10,7 +10,11 @@ import BalanceHeader from '@components/Common/BalanceHeader';
 import BalanceHeaderFiat from '@components/Common/BalanceHeaderFiat';
 import ApiError from '@components/Common/ApiError';
 import styled from 'styled-components';
-import PrimaryButton from '@components/Common/PrimaryButton';
+import PrimaryButton, { SecondaryButton } from '@components/Common/PrimaryButton';
+import MintHistory from '@components/Wallet/MintHistory';
+import { getMempoolMints, updateMempoolMints } from '@utils/mintHistory';
+
+
 
 const StyledSpacer = styled.div`
     height: 1px;
@@ -39,9 +43,63 @@ const Tokens = ({ jestBCH, passLoadingStatus }) => {
     const walletState = getWalletState(wallet);
     const { balances, tokens } = walletState;
 
-    const { getBcashRestUrl, createToken } = useBCH();
+    const { getBcashRestUrl, createToken, getMintHistory } = useBCH();
 
     const history = useHistory();
+
+    const [mintHistory, setMintHistory] = useState(null);
+
+    const getSelfMintTokens = async (tokenIds) => {
+        let tokens = [];
+        for (let i = 0; i < tokenIds.length; i++) {
+            const tokenData = await fetch(
+                `${getBcashRestUrl()}/token/${tokenIds[i]}`
+            ).then(res => res.json());
+            tokens.push(tokenData);
+        }
+        return tokens;
+    }
+
+    const onMintHistory = async (minterPublicKey) => {
+        // get mempool mints from local storage and indexed mints from stats api
+        const mempoolMints = await getMempoolMints(minterPublicKey);
+        const indexedMints = await getMintHistory(minterPublicKey); 
+        const indexedMintsTxids = indexedMints.map(mint => mint.txid);
+        
+        // keep mints as unconfirmed if not already indexed
+        const unconfirmedMints = mempoolMints.filter(mint => 
+            !indexedMintsTxids.includes(mint.txid)
+        );
+        
+        // update storage if some mints have been confirmed
+        const updateRequired = unconfirmedMints.length !== mempoolMints.length;
+        if (updateRequired) 
+            await updateMempoolMints(minterPublicKey, unconfirmedMints);
+
+        const mintTxs = unconfirmedMints.concat(indexedMints);
+
+        // get token data for minted tokens
+        const uniqueTokenIds = mintTxs.map(tx => tx.token_id)
+            .filter((value, index, array) => array.indexOf(value) === index);
+        const tokens = await getSelfMintTokens(uniqueTokenIds);
+            
+        // process data to use regular Tx Object
+        const mintHistory = mintTxs.map(function(tx) {
+            const tokenInfo = tokens.find(({ tokenId }) => tokenId === tx.token_id);
+            const divisor = 10 ** tokenInfo.decimals;
+            tx.outgoingTx = true;
+            tx.tokenTx = true;
+            tx.tokenInfo = {
+                tokenId: tokenInfo.tokenId,                    
+                tokenName: tokenInfo.name,
+                transactionType: 'MINT',
+                qtySent: +(tx.mint_total_amount / divisor).toFixed(tokenInfo.decimals),
+            };
+            return tx;
+        });
+
+        setMintHistory(mintHistory);
+    };
 
     return (
         <>
@@ -114,6 +172,28 @@ const Tokens = ({ jestBCH, passLoadingStatus }) => {
             >
                 Self Mint Tokens
             </PrimaryButton>
+
+            <StyledSpacer />
+            <SecondaryButton onClick={() => onMintHistory(wallet.Path1899.publicKey)}>
+                Show Mint History
+            </SecondaryButton>
+            {mintHistory && ( 
+                <>  
+                    {mintHistory?.length > 0 ? (
+                        <MintHistory 
+                            txs={mintHistory}
+                            fiatPrice={fiatPrice}
+                            fiatCurrency={
+                                cashtabSettings && cashtabSettings.fiatCurrency
+                                    ? cashtabSettings.fiatCurrency
+                                    : 'usd'
+                            }
+                        />                                                
+                    ) : (
+                        <p>No mint history available</p>
+                    )}
+                </>
+            )}
         </>
     );
 };

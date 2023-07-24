@@ -47,6 +47,10 @@ const SentLabel = styled.span`
     font-weight: bold;
     color: ${props => props.theme.secondary} !important;
 `;
+const MintedLabel = styled.span`
+    font-weight: bold;
+    color: ${props => props.theme.secondary} !important;
+`;
 const ReceivedLabel = styled.span`
     font-weight: bold;
     color: ${props => props.theme.primary} !important;
@@ -173,7 +177,7 @@ const TxWrapper = styled.div`
     }
 `;
 
-const Tx = ({ data, fiatPrice, fiatCurrency }) => {
+const Tx = ({ data, fiatPrice, fiatCurrency, isExternalMint = false }) => {
     const txDate =
         typeof data.blocktime === 'undefined'
         || data.blocktime === 0
@@ -233,14 +237,36 @@ const Tx = ({ data, fiatPrice, fiatCurrency }) => {
                                 data.tokenInfo.transactionType === 'GENESIS' ? (
                                     <ReceivedLabel>Genesis</ReceivedLabel>
                                 ) : (
-                                    <SentLabel>Sent</SentLabel>
+                                    <>
+                                        {isExternalMint ? (
+                                            <MintedLabel>Minted</MintedLabel>
+                                        ) : (
+                                            <SentLabel>Sent</SentLabel>
+                                        )}
+                                    </>
                                 )}
                             </>
                         ) : (
                             <ReceivedLabel>Received</ReceivedLabel>
                         )}
                         <br />
-                        {txDate}
+                        {isExternalMint ? (
+                            <>
+                                {data.block == -1 ? (
+                                    <>
+                                        unconfirmed
+                                    </>
+                                ) : (
+                                    <>
+                                        Block {data.block}
+                                    </>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                {txDate}
+                            </>
+                        )}
                     </DateType>
                     {data.tokenTx ? (
                         <TokenInfo outgoing={data.outgoingTx}>
@@ -445,6 +471,7 @@ Tx.propTypes = {
     data: PropTypes.object,
     fiatPrice: PropTypes.number,
     fiatCurrency: PropTypes.string,
+    isExternalMint: PropTypes.bool,
 };
 
 export default Tx;
