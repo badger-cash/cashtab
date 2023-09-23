@@ -74,8 +74,7 @@ const SendBip70 = ({ passLoadingStatus }) => {
     } = walletState;
     // Modal settings
     const purchaseTokenIds = [
-        '7e7dacd72dcdb14e00a03dd3aff47f019ed51a6f1f4e4f532ae50692f62bc4e5',
-        '744354f928fa48de87182c4024e2c4acbd3c34f42ce9d679f541213688e584b1',
+        '00',
         '4075459e0ac841f234bc73fc4fe46fe5490be4ed98bc8ca3f9b898443a5a381a'
     ];
 

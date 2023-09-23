@@ -2488,6 +2488,20 @@
     "@webassemblyjs/wast-parser" "1.9.0"
     "@xtuc/long" "4.2.2"
 
+"@wert-io/module-react-component@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@wert-io/module-react-component/-/module-react-component-1.0.0.tgz#d9f4f92e80027bf55e7532b15d7edc2168742a4e"
+  integrity sha512-oN1/MVySO2q4cwHDS/U78yB4cTaNHRRjQfF64Psot2jxF0A1h4cVbzfjissGNFcCsJcljQga20BRY6CSLg8O7Q==
+  dependencies:
+    "@wert-io/widget-initializer" "3.1.0"
+    react "^18.1.0"
+    react-dom "^18.1.0"
+
+"@wert-io/widget-initializer@3.1.0":
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/@wert-io/widget-initializer/-/widget-initializer-3.1.0.tgz#39e074b792f256659ba0811a987c5a014d22f0ed"
+  integrity sha512-pY5Ws0rL/lhxTAu5fEcLPPqvX9nr+aru3+/3DvypkPAuouBbbpW5xEW0lc9DcWfWsgrpudp0Cpujg5IPRtvjVw==
+
 "@xtuc/ieee754@^1.2.0":
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/@xtuc/ieee754/-/ieee754-1.2.0.tgz#eef014a3145ae477a1cbc00cd1e552336dceb790"
@@ -10907,6 +10921,14 @@ react-dom@^17.0.1:
     object-assign "^4.1.1"
     scheduler "^0.20.2"
 
+react-dom@^18.1.0:
+  version "18.2.0"
+  resolved "https://registry.yarnpkg.com/react-dom/-/react-dom-18.2.0.tgz#22aaf38708db2674ed9ada224ca4aa708d821e3d"
+  integrity sha512-6IMTriUmvsjHUjNtEDudZfuDQUoWXVxKHhlEGSk81n4YFS+r/Kl99wXiwlVXtPBtJenozv2P+hxDsw9eA7Xo6g==
+  dependencies:
+    loose-envify "^1.1.0"
+    scheduler "^0.23.0"
+
 react-easy-crop@^3.5.3:
   version "3.5.3"
   resolved "https://registry.yarnpkg.com/react-easy-crop/-/react-easy-crop-3.5.3.tgz#7481b6e484a8b6ac308373f0b173aad4f1d10239"
@@ -10998,6 +11020,13 @@ react@^17.0.1:
   dependencies:
     loose-envify "^1.1.0"
     object-assign "^4.1.1"
+
+react@^18.1.0:
+  version "18.2.0"
+  resolved "https://registry.yarnpkg.com/react/-/react-18.2.0.tgz#555bd98592883255fa00de14f1151a917b5d77d5"
+  integrity sha512-/3IjMdb2L9QbBdWiW5e3P2/npwMBaU9mHCSCUzNln0ZCYbcfTsGbTJrU/kGemdH2IWmB2ioZ+zkxtmq6g09fGQ==
+  dependencies:
+    loose-envify "^1.1.0"
 
 read-pkg-up@^4.0.0:
   version "4.0.0"
@@ -11513,6 +11542,13 @@ scheduler@^0.20.2:
   dependencies:
     loose-envify "^1.1.0"
     object-assign "^4.1.1"
+
+scheduler@^0.23.0:
+  version "0.23.0"
+  resolved "https://registry.yarnpkg.com/scheduler/-/scheduler-0.23.0.tgz#ba8041afc3d30eb206a487b6b384002e4e61fdfe"
+  integrity sha512-CtuThmgHNg7zIZWAXi3AsyIzA3n4xx7aNyjwC2VJldO2LMVDhFK+63xGqq6CsJH4rTAt6/M+N4GhZiDYPx9eUw==
+  dependencies:
+    loose-envify "^1.1.0"
 
 schema-utils@^1.0.0:
   version "1.0.0"
