@@ -1740,13 +1740,24 @@ export default function useBCH() {
     const outscriptHexV2 = '01217f78aa7c517f01207f6b7c81637c687eaa6c5' +
     '17f01207f6b7c81637c687eaa6c517f01207f6b7c81637c687eaa6c517f01207' +
     'f6b7c81637c687eaa6c517f01207f6b7c81637c687eaa6c517f01207f6b7c816' +
-    '37c687eaa6c517f7c81637c687eaa202378b2a25b26ab248cd09a11b41f54452' +
-    'c4c8860fd1f7a835d13e784b1ac80be887c517f7c817f766b7bbb6c011a7f7c5' +
+    '37c687eaa6c517f7c81637c687eaa2062443f1f0f45468a0e69c6eb1f3f4aabd' +
+    'cc541ac64eae813365d47dbf6dab176887c517f7c817f766b7bbb6c011a7f7c5' +
     '67f5479a9887501247faa5279820128947f01207f757b8801447f7701247f758' +
     '8a86f7b828c7f757c7bbb75ac';
 
-    const getMintVaultAddress = () => {
-        const outScriptHash = Hash160.digest(Buffer.from(outscriptHexV2, 'hex'));
+    const getOutscriptHexV2 = (isSandbox = false) => {
+        if (isSandbox)
+            return outscriptHexV2.replace(
+                '62443f1f0f45468a0e69c6eb1f3f4aabdcc541ac64eae813365d47dbf6dab176',
+                '2378b2a25b26ab248cd09a11b41f54452c4c8860fd1f7a835d13e784b1ac80be'
+            );
+        return outscriptHexV2;
+    }
+
+    const getMintVaultAddress = (isSandbox = false) => {
+        const outscriptHex = getOutscriptHexV2(isSandbox);
+        console.log('outscriptHex', outscriptHex);
+        const outScriptHash = Hash160.digest(Buffer.from(outscriptHex, 'hex'));
         const p2shPubKeyScript = Script.fromScripthash(outScriptHash);
         return p2shPubKeyScript.getAddress();
     }
@@ -1756,7 +1767,8 @@ export default function useBCH() {
         authCode, // Base64
         testOnly = false,
         returnRawTx = false,
-        rawBurnTx
+        rawBurnTx,
+        isSandbox = false
     ) => {
         try {
             // Process entered Auth Code string
@@ -1789,7 +1801,7 @@ export default function useBCH() {
             // Add inputs (must be in this order)
             tx.addCoin(batonCoin); // Input index 0: existing mint baton
 
-            const outScript = Script.fromRaw(Buffer.from(outscriptHexV2, 'hex'));
+            const outScript = Script.fromRaw(Buffer.from(getOutscriptHexV2(isSandbox), 'hex'));
 
             // Validation steps
             const p2shAddr = Address.fromScripthash(outScript.hash160());

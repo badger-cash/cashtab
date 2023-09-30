@@ -79,7 +79,7 @@ const Checkout = ({ passLoadingStatus }) => {
     } = walletState;
     // Modal settings
     const purchaseTokenIds = [
-        '00', // removed production v2
+        '52b12c03466936e7e3b2dcfcff847338c53c611ba8ab74dd8e4dadf7ded12cf6', // production v2
         '4075459e0ac841f234bc73fc4fe46fe5490be4ed98bc8ca3f9b898443a5a381a' // sandbox v2
     ];
 
@@ -124,6 +124,14 @@ const Checkout = ({ passLoadingStatus }) => {
     const [tokensMinted, setTokensMinted] = useState(false);
     const [tokensSent, setTokensSent] = useState(false);
     const [purchaseTokenAmount, setPurchaseTokenAmount] = useState(0);
+
+    const exchangeAdditionalAmount = (purchaseTokenAmount * .01).toFixed(2); // Exchange rate
+    const feeAmount = ((Number(purchaseTokenAmount) + Number(exchangeAdditionalAmount)) * .04).toFixed(2); // Add 4% fee
+    const totalAmount = (Number(purchaseTokenAmount) + Number(exchangeAdditionalAmount) + Number(feeAmount)).toFixed(2);
+
+    const isSandbox = purchaseTokenIds.slice(1).includes(formData.token?.tokenId);
+    // const tokenTypeVersion = purchaseTokenIds.slice(2).includes(formData.token?.tokenId) ? 2 : 1;
+    const tokenTypeVersion = 2
 
     // Postage Protocol Check (for BURN)
     const [postageData, setPostageData] = useState(null);
@@ -543,7 +551,8 @@ const Checkout = ({ passLoadingStatus }) => {
                     authCodeB64,
                     false, // testOnly
                     doChainedMint,
-                    rawBurnTx
+                    rawBurnTx,
+                    isSandbox
                 );
             }
 
@@ -616,16 +625,6 @@ const Checkout = ({ passLoadingStatus }) => {
         }
     }
 
-    const feeAmount = (purchaseTokenAmount * .05).toFixed(2); // Add 5% fee
-    const totalAmount = (Number(purchaseTokenAmount) + Number(feeAmount)).toFixed(2);
-
-    const isSandbox = purchaseTokenIds.slice(1).includes(formData.token?.tokenId);
-    // const tokenTypeVersion = purchaseTokenIds.slice(2).includes(formData.token?.tokenId) ? 2 : 1;
-    const tokenTypeVersion = 2
-
-    const referenceId = tokenTypeVersion === 1 ? `${wallet.Path1899.slpAddress}-${purchaseTokenAmount}`
-        : `b70-${wallet.Path1899.slpAddress}-${prInfoFromUrl.url}`
-
     const wertSuccess = async (result) => {
         try {
             console.log('result', result);
@@ -635,9 +634,11 @@ const Checkout = ({ passLoadingStatus }) => {
                     console.log('wert pending')
                     divRef.current.scrollIntoView();
                     // divRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-                    passLoadingStatus('Processing payment. Please wait a moment...');
-                } else if (result.status === 'canceled') {
-                    console.log('wert canceled')
+                    passLoadingStatus(
+                        'Processing payment. This can take up to 60 seconds.'
+                    );
+                } else {
+                    console.log(`wert ${result.status}`)
                     passLoadingStatus(false);
                 }
                 return;
@@ -650,7 +651,7 @@ const Checkout = ({ passLoadingStatus }) => {
             if (Number(tokenFormattedBalance) >= .01) {
                 passLoadingStatus('Adding existing wallet balance to payment...');
                 const mintVaultBatonOutput = new Output({
-                    address: getMintVaultAddress(),
+                    address: getMintVaultAddress(isSandbox),
                     value: 5700
                 })
                 burnTx = await generateBurnTx(
@@ -754,12 +755,12 @@ const Checkout = ({ passLoadingStatus }) => {
 
 						<ListItem>
 							<span className="key gray">Subtotal:</span>
-							<span className="value gray">${purchaseTokenAmount}</span>
+							<span className="value gray">${purchaseTokenAmount.toFixed(2)}</span>
 						</ListItem>
 
 						<ListItem>
 							<span className="key gray">Fee:</span>
-							<span className="value gray">${feeAmount}</span>
+							<span className="value gray">${(Number(exchangeAdditionalAmount) + Number(feeAmount)).toFixed(2)}</span>
 						</ListItem>
 						<ListItem>
 							<span className="key gray bold">Total:</span>
@@ -820,17 +821,17 @@ const Checkout = ({ passLoadingStatus }) => {
                                 <WertModule
                                     style={{height: "580px"}}
                                     options={{
-                                        partner_id: '01H97V3M5ZZPVS7RXW2V2NXVN5',
-                                        origin: 'https://sandbox.wert.io',
+                                        partner_id: isSandbox ? '01H97V3M5ZZPVS7RXW2V2NXVN5' : '01HB6ASSZED5SH5V8KWQD1MR87' ,
+                                        origin: `https://${isSandbox ? 'sandbox' : 'widget'}.wert.io`,
                                         click_id: uuid, // unique id of purchase in your system
                                         currency: 'USD',
                                         commodity: 'BUX', // name of your token in Wert system
-                                        network: 'testnet', 
+                                        network: isSandbox ? 'testnet' : 'mainnet', 
                                         address: wallet.Path1899.cashAddress,
                                         commodities: JSON.stringify([
                                             {
-                                            commodity: "BUX",
-                                            network: "testnet",
+                                            commodity: 'BUX',
+                                            network: isSandbox ? 'testnet' : 'mainnet',
                                             }, // this restricts what currencies will be available in the widget
                                         ]),
                                         commodity_amount: purchaseTokenAmount, // amount being minted
@@ -861,9 +862,9 @@ const Checkout = ({ passLoadingStatus }) => {
                         <Heading>You are about to purchase a BUX Self-Mint Authorization Code</Heading>
                         <HorizontalSpacer />
                         <span className="key black">To proceed you must agree to the following:</span>
-                        <p className=" first">1. The seller of the digital good in this transaction is <a target="_blank" rel="noopener noreferrer" href="https://bux.digital">Badger LLC</a></p>
+                        <p className=" first">1. The seller of the digital good in this transaction is <a target="_blank" rel="noopener noreferrer" href="https://wert.io">WERT.IO</a></p>
                         <p>2. This purchase is for an authorization code ONLY. It is not a purchase of digital currency, credits on any third-party platform, or any other product or service</p>
-                        <p>3. This unhosted wallet, upon receiving the authorization code (after your PayPal/Credit Card payment is made), will mint and send BUX tokens to settle the payment request</p>
+                        <p>3. This unhosted wallet, upon receiving the authorization code (after your credit card payment is made), will mint and send BUX tokens to settle the payment request</p>
                         <p>4. You have read and understand the BUX <a target="_blank" rel="noopener noreferrer" href="https://bux.digital/tos.html"> Terms Of Service</a></p>
                         <PrimaryButton onClick={() => setHasAgreed(true)}>I Agree</PrimaryButton>
                     </AgreeModal>
