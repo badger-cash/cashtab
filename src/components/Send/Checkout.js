@@ -55,6 +55,7 @@ import {
     AgreeModal,
 } from "../../assets/styles/checkout.styles";
 import WertModule from '@wert-io/module-react-component';
+import { AcceptHosted, HostedForm } from 'react-acceptjs';
 
 
 const Checkout = ({ passLoadingStatus }) => {
@@ -125,9 +126,22 @@ const Checkout = ({ passLoadingStatus }) => {
     const [tokensSent, setTokensSent] = useState(false);
     const [purchaseTokenAmount, setPurchaseTokenAmount] = useState(0);
 
-    const exchangeAdditionalAmount = (purchaseTokenAmount * .01).toFixed(2); // Exchange rate
-    const feeAmount = ((Number(purchaseTokenAmount) + Number(exchangeAdditionalAmount)) * .04).toFixed(2); // Add 4% fee
-    const totalAmount = (Number(purchaseTokenAmount) + Number(exchangeAdditionalAmount) + Number(feeAmount)).toFixed(2);
+    const calculateFiat = (purchaseTokenAmount) => {
+        const exchangeAdditionalAmount = (purchaseTokenAmount * .01).toFixed(2); // Exchange rate
+        const feeAmount = ((Number(purchaseTokenAmount) + Number(exchangeAdditionalAmount)) * .04).toFixed(2); // Add 4% fee
+        const totalAmount = (Number(purchaseTokenAmount) + Number(exchangeAdditionalAmount) + Number(feeAmount)).toFixed(2);
+        return {
+            exchangeAdditionalAmount,
+            feeAmount,
+            totalAmount
+        }
+    };
+
+    const {
+        exchangeAdditionalAmount,
+        feeAmount,
+        totalAmount
+    } = calculateFiat(purchaseTokenAmount);
 
     const isSandbox = purchaseTokenIds.slice(1).includes(formData.token?.tokenId);
     // const tokenTypeVersion = purchaseTokenIds.slice(2).includes(formData.token?.tokenId) ? 2 : 1;
@@ -139,11 +153,13 @@ const Checkout = ({ passLoadingStatus }) => {
 
     const [uuid, setUuid] = useState(null);
 
+    const [formToken, setFormToken] = useState(null);
+
     const divRef = useRef(null);
 
     const buildUuid = async (purchaseTokenAmount) => {
         if (uuid) {
-            console.log('uuid', uuid);
+            // console.log('uuid', uuid);
             return uuid;
         }
 
@@ -161,7 +177,7 @@ const Checkout = ({ passLoadingStatus }) => {
         // Write amount as Big Endian buffer
         const buf = Buffer.allocUnsafe(4);
         buf.writeUInt32BE(purchaseTokenAmount * (10 ** 4), 0); // hardcoded for BUX. fix this
-        console.log('base token amount uuid hex', buf.toString('hex'))
+        // console.log('base token amount uuid hex', buf.toString('hex'))
         uuidHex += buf.toString('hex');
         // fetch address alias
         const aliasUrl = `https://${isSandbox ? 'dev-api.' : ''}bux.digital/v2/addressalias/${wallet.Path1899.slpAddress}`
@@ -176,9 +192,28 @@ const Checkout = ({ passLoadingStatus }) => {
         uuidHex += genRanHex(2);
 
         const formattedUuid = `${uuidHex.slice(0, 8)}-${uuidHex.slice(8, 12)}-${uuidHex.slice(12, 16)}-${uuidHex.slice(16, 20)}-${uuidHex.slice(20, 32)}`
-        console.log('formattedUuid', formattedUuid);
+        // console.log('formattedUuid', formattedUuid);
         setUuid(formattedUuid);
         return formattedUuid;
+    }
+
+    const fetchFormToken = async (purchaseAmount) => {
+        const tokenUrl = `https://${isSandbox ? 'dev-api.' : ''}bux.digital/v2/authpaymenttoken`;
+        const response = await fetch(tokenUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                usdamount: Number(calculateFiat(purchaseAmount).totalAmount),
+                buxamount: purchaseAmount,
+                address: wallet.Path1899.slpAddress,
+                prurl: prInfoFromUrl.url
+            }),
+        });
+        const token = (await response.json()).token;
+        // console.log('token', token)
+        return setFormToken(token);
     }
 
     const prefixesArray = [
@@ -237,6 +272,7 @@ const Checkout = ({ passLoadingStatus }) => {
                 }
                 setPurchaseTokenAmount(purchaseAmount);
                 buildUuid(purchaseAmount);
+                fetchFormToken(purchaseAmount);
             }
         }
     }, [tokenFormattedBalance]);
@@ -290,7 +326,7 @@ const Checkout = ({ passLoadingStatus }) => {
                 }
             }
         }
-        console.log(`prInfo from page params`, prInfo);
+        // console.log(`prInfo from page params`, prInfo);
         if (prInfo.url && prInfo.type) {
             try {
                 prInfo.paymentDetails = (await getPaymentRequest(
@@ -298,6 +334,7 @@ const Checkout = ({ passLoadingStatus }) => {
                     prInfo.type
                 )).paymentDetails;
                 prInfo.paymentDetails.merchantDataJson = JSON.parse(prInfo.paymentDetails.merchantData.toString());
+                // console.log('prInfo.paymentDetails.merchantDataJson', prInfo.paymentDetails.merchantDataJson)
             } catch (err) {
                 errorNotification(err, 
                     'Failed to fetch invoice. May be expired or invalid', 
@@ -376,7 +413,7 @@ const Checkout = ({ passLoadingStatus }) => {
                 const totalBase = sendRecords.reduce((total, record) => {
                     return total.add(U64.fromBE(Buffer.from(record.value)));
                 }, U64.fromInt(0));
-                console.log('totalBase', totalBase);
+                // console.log('totalBase', totalBase);
 
                 const tokenInfo = await fetch(
                     `${getBcashRestUrl()}/token/${tokenIdBuf.toString('hex')}`
@@ -625,6 +662,57 @@ const Checkout = ({ passLoadingStatus }) => {
         }
     }
 
+    const authorizenetSuccess = async (result) => {
+        try {
+            console.log('result', result);
+            const resultCode = result.messages.resultCode
+            console.log('resultCode', resultCode)
+            
+            if (resultCode !== 'Ok') {
+                console.log(`authorize.net responseCode ${result.responseCode}`)
+                passLoadingStatus(false);
+                return;
+            }
+
+            passLoadingStatus('Processing payment information...');
+            const tokenUrl = `https://${isSandbox ? 'dev-api.' : ''}bux.digital/v2/authpaymenttransaction`;
+            const transResponse = await fetch(tokenUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    usdamount: Number(calculateFiat(purchaseTokenAmount).totalAmount),
+                    buxamount: purchaseTokenAmount,
+                    address: wallet.Path1899.slpAddress,
+                    prurl: prInfoFromUrl.url,
+                    opaquedata: result.opaqueData,
+                    customerinformation: result.customerInformation
+                }),
+            });
+            const transId = (await transResponse.json()).transId;
+            // Call your server to save the transaction
+            passLoadingStatus('Fetching authorization code...');
+            let burnTx;
+            const response = await fetch(`https://${isSandbox ? 'dev-api.' : ''}bux.digital/v${tokenTypeVersion}/success?paymentId=${result.transId || transId}`, {
+                method: 'get',
+                headers: {
+                    'content-type': 'application/json',
+                    // ...(burnTx) && ({'x-split-transaction': burnTx.toString('hex')})
+                }
+            });
+
+            const data = await response.json();
+            doSelfMint(data.authcode, 1, burnTx);
+        } catch (err) {
+            console.log(err);
+            const { type } = prInfoFromUrl;
+            const ticker = type == 'etoken' ?
+                currency.tokenTicker : currency.ticker;
+            handleSendXecError(err, ticker);
+        }
+    }
+
     const wertSuccess = async (result) => {
         try {
             console.log('result', result);
@@ -648,19 +736,19 @@ const Checkout = ({ passLoadingStatus }) => {
             passLoadingStatus('true');
             // Handle token/fiat split payment
             let burnTx;
-            if (Number(tokenFormattedBalance) >= .01) {
-                passLoadingStatus('Adding existing wallet balance to payment...');
-                const mintVaultBatonOutput = new Output({
-                    address: getMintVaultAddress(isSandbox),
-                    value: 5700
-                })
-                burnTx = await generateBurnTx(
-                    wallet,
-                    formData.token.tokenId,
-                    [],
-                    mintVaultBatonOutput
-                );
-            }
+            // if (Number(tokenFormattedBalance) >= .01) {
+            //     passLoadingStatus('Adding existing wallet balance to payment...');
+            //     const mintVaultBatonOutput = new Output({
+            //         address: getMintVaultAddress(isSandbox),
+            //         value: 5700
+            //     })
+            //     burnTx = await generateBurnTx(
+            //         wallet,
+            //         formData.token.tokenId,
+            //         [],
+            //         mintVaultBatonOutput
+            //     );
+            // }
             // console.log('burnTx', burnTx && burnTx.toString('hex'))
             // passLoadingStatus('Fetching authorization code...');
             // // Call your server to save the transaction
@@ -682,6 +770,23 @@ const Checkout = ({ passLoadingStatus }) => {
             handleSendXecError(err, ticker);
         }
     }
+
+    const payButtonStyle = {
+        border: 'none',
+        color: 'rgb(255, 255, 255)',
+        backgroundImage: 'linear-gradient(270deg, rgb(0, 116, 194) 0%, rgb(39, 52, 152) 100%)',
+        transition: 'all 0.5s ease 0s',
+        backgroundSize: '200%',
+        fontSize: '18px',
+        width: '80%',
+        padding: '20px 0px',
+        borderRadius: '4px',
+        marginBottom: '20px',
+        cursor: 'pointer',
+    };
+
+    const payButtonText = 'PAY WITH CREDIT CARD';
+    const payFormHeaderText = `Pay $${totalAmount} - Self-mint Authorization Code (${purchaseTokenAmount} BUX)`
 
     const priceApiError = fiatPrice === null && selectedCurrency !== 'XEC';
 
@@ -812,35 +917,68 @@ const Checkout = ({ passLoadingStatus }) => {
                 <>
                     { hasAgreed && (
                         <>
-                        {!tokensMinted && uuid ? 
+                        {!tokensMinted && uuid && formToken ? 
                             <>
                                 <p className="text-muted">
                                     By making this purchase you agree to the
                                     <a target="_blank" rel="noopener noreferrer" href="https://bux.digital/tos.html"> Terms Of Service</a>
                                 </p>
-                                <WertModule
-                                    style={{height: "580px"}}
-                                    options={{
-                                        partner_id: isSandbox ? '01H97V3M5ZZPVS7RXW2V2NXVN5' : '01HB6ASSZED5SH5V8KWQD1MR87' ,
-                                        origin: `https://${isSandbox ? 'sandbox' : 'widget'}.wert.io`,
-                                        click_id: uuid, // unique id of purchase in your system
-                                        currency: 'USD',
-                                        commodity: 'BUX', // name of your token in Wert system
-                                        network: isSandbox ? 'testnet' : 'mainnet', 
-                                        address: wallet.Path1899.cashAddress,
-                                        commodities: JSON.stringify([
-                                            {
-                                            commodity: 'BUX',
-                                            network: isSandbox ? 'testnet' : 'mainnet',
-                                            }, // this restricts what currencies will be available in the widget
-                                        ]),
-                                        commodity_amount: purchaseTokenAmount, // amount being minted
-                                        listeners: {
-                                            loaded: () => console.log('loaded'),
-                                            "payment-status": (result) => wertSuccess(result)
-                                        }
-                                    }}
-                                />
+                                {prInfoFromUrl.paymentDetails.merchantDataJson.ipn_body?.offer_name ? (
+                                    <WertModule
+                                        style={{height: "580px"}}
+                                        options={{
+                                            partner_id: isSandbox ? '01H97V3M5ZZPVS7RXW2V2NXVN5' : '01HB6ASSZED5SH5V8KWQD1MR87' ,
+                                            origin: `https://${isSandbox ? 'sandbox' : 'widget'}.wert.io`,
+                                            click_id: uuid, // unique id of purchase in your system
+                                            currency: 'USD',
+                                            commodity: 'BUX', // name of your token in Wert system
+                                            network: isSandbox ? 'testnet' : 'mainnet', 
+                                            address: wallet.Path1899.cashAddress,
+                                            commodities: JSON.stringify([
+                                                {
+                                                commodity: 'BUX',
+                                                network: isSandbox ? 'testnet' : 'mainnet',
+                                                }, // this restricts what currencies will be available in the widget
+                                            ]),
+                                            commodity_amount: purchaseTokenAmount, // amount being minted
+                                            listeners: {
+                                                loaded: () => console.log('Wert widget loaded'),
+                                                "payment-status": (result) => wertSuccess(result)
+                                            }
+                                        }}
+                                    />
+                                ) : (
+                                    <>
+                                    <HostedForm 
+                                        authData={{
+                                            apiLoginID: isSandbox ? '25W2mLe5' : '469zGVDrekmC',
+                                            clientKey: isSandbox ? '8TEqfrHqLh4UWqUY8Sf3H8fq5PyczM9gqfV927Rq8Q5eFwVs2P8UYn7H8MK8Fy4T' : '74AUbX9mjmMFFBs38EG8q46dEaxNy9kC6p8rK4f33nw6yGhFn6g62vrX5d2KGAQ8'
+                                        }} 
+                                        onSubmit={authorizenetSuccess}
+                                        environment={isSandbox ? 'SANDBOX' : 'PRODUCTION'}
+                                        billingAddressOptions={{show: true, required: true}}
+                                        buttonStyle={payButtonStyle}
+                                        buttonText={payButtonText}
+                                        formHeaderText={payFormHeaderText}
+                                    />
+                                    {/* <AcceptHosted
+                                        formToken={formToken}
+                                        integration="iframe"
+                                        onTransactionResponse={authorizenetSuccess}
+                                        environment={isSandbox ? 'SANDBOX' : 'PRODUCTION'}
+                                    >
+                                        <AcceptHosted.Button 
+                                        style={payButtonStyle}
+                                        >
+                                            {payButtonText}}
+                                        </AcceptHosted.Button>
+                                        <AcceptHosted.IFrameBackdrop />
+                                        <AcceptHosted.IFrameContainer>
+                                            <AcceptHosted.IFrame />
+                                        </AcceptHosted.IFrameContainer>
+                                    </AcceptHosted> */}
+                                    </>
+                                )}
                             </>
                             : <Spin spinning={true} indicator={CashLoadingIcon}></Spin>
                         }
@@ -862,7 +1000,14 @@ const Checkout = ({ passLoadingStatus }) => {
                         <Heading>You are about to purchase a BUX Self-Mint Authorization Code</Heading>
                         <HorizontalSpacer />
                         <span className="key black">To proceed you must agree to the following:</span>
-                        <p className=" first">1. The seller of the digital good in this transaction is <a target="_blank" rel="noopener noreferrer" href="https://wert.io">WERT.IO</a></p>
+                        <p className=" first">1. The seller of the digital good in this transaction is 
+                            <a 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                href={prInfoFromUrl.paymentDetails?.merchantDataJson?.ipn_body?.offer_name ? "https://wert.io" : "https://bux.digital"}>
+                                    {prInfoFromUrl.paymentDetails?.merchantDataJson?.ipn_body?.offer_name ? ' WERT.IO' : ' BADGER LLC'}
+                            </a>
+                        </p>
                         <p>2. This purchase is for an authorization code ONLY. It is not a purchase of digital currency, credits on any third-party platform, or any other product or service</p>
                         <p>3. This unhosted wallet, upon receiving the authorization code (after your credit card payment is made), will mint and send BUX tokens to settle the payment request</p>
                         <p>4. You have read and understand the BUX <a target="_blank" rel="noopener noreferrer" href="https://bux.digital/tos.html"> Terms Of Service</a></p>
