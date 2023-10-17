@@ -81,6 +81,26 @@ export const PurchaseAuthCode = styled.div`
 
 		color: #8a8a8a;
 	}
+
+	.text-muted-small {
+		display: block;
+		font-weight: 400;
+		font-size: 0.7rem;
+		line-height: 1.25;
+		margin-bottom: 0;
+
+		color: #8a8a8a;
+	}
+
+	.text-red {
+		display: block;
+		font-weight: 400;
+		font-size: 0.875rem;
+		line-height: 1.25;
+		margin-bottom: 0;
+
+		color: red;
+	}
 `;
 
 export const Heading = styled.h3`

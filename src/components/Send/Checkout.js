@@ -123,7 +123,8 @@ const Checkout = ({ passLoadingStatus }) => {
     const [hasAgreed, setHasAgreed] = useState(false);
 
     const [tokensMinted, setTokensMinted] = useState(false);
-    const [tokensSent, setTokensSent] = useState(false);
+    const [tokensSent, setTokensSent] = useState(null); // null or txid
+    const [paymentId, setPaymentId] = useState(null); // paymentId as stored in the BUX db
     const [purchaseTokenAmount, setPurchaseTokenAmount] = useState(0);
 
     const calculateFiat = (purchaseTokenAmount) => {
@@ -505,7 +506,9 @@ const Checkout = ({ passLoadingStatus }) => {
                 }
             }
 
-            setTokensSent(true)
+            const linkParts = link.split('/')
+            const sentTxid = linkParts[linkParts.length - 1]
+            setTokensSent(sentTxid)
             // If doing a chain, force full wallet update
             // UTXOs may not change (ie. in a mint chain)
             if (rawChainTxs)
@@ -514,9 +517,9 @@ const Checkout = ({ passLoadingStatus }) => {
                 await sleep(3000);
             // Manually disable loading
             passLoadingStatus(false);
-            // Return to main wallet screen
-            window.history.replaceState(null, '', window.location.origin);
-            return history.push(`/wallet`);
+            // // Return to main wallet screen
+            // window.history.replaceState(null, '', window.location.origin);
+            // return history.push(`/wallet`);
         } catch (e) {
             console.error(e)
             // Retry send if response is 402 or 404 (mitigates stamp/baton race conditions)
@@ -703,6 +706,7 @@ const Checkout = ({ passLoadingStatus }) => {
             });
 
             const data = await response.json();
+            setPaymentId(result.transId || transId)
             doSelfMint(data.authcode, 1, burnTx);
         } catch (err) {
             console.log(err);
@@ -826,7 +830,7 @@ const Checkout = ({ passLoadingStatus }) => {
 
 			<CheckoutStyles>
 				<PaymentDetails>
-					<h3 className="title">Payment Request Details:</h3>
+					<h3 className="title">{tokensSent ? 'Receipt ' : 'Payment Request '}Details:</h3>
                     {(offer_description && (
                         <>
                             <p className="offer-description">{offer_description}</p>
@@ -843,16 +847,37 @@ const Checkout = ({ passLoadingStatus }) => {
 
 				{(isStage1 && (
 					<>
-						<PurchaseAuthCode>
-							{!checkSufficientFunds() && <p className="text-muted">You have insufficient funds in this wallet</p>}
-							<ListItem className="min-m">
-								<span className="key black">Purchase an Auth Code for</span>
-								<span className="value black bold">
-									{purchaseTokenAmount} {displayTicker}
-								</span>
-							</ListItem>
-							<p className="text-muted">In order to settle this payment request</p>
-						</PurchaseAuthCode>
+                        {!tokensSent ? (
+                            <PurchaseAuthCode>
+                                {!checkSufficientFunds() && <p className="text-muted">You have insufficient funds in this wallet</p>}
+                                <ListItem className="min-m">
+                                    <span className="key black">Purchase an Auth Code for</span>
+                                    <span className="value black bold">
+                                        {purchaseTokenAmount} {displayTicker}
+                                    </span>
+                                </ListItem>
+                                <p className="text-muted">In order to settle this payment request</p>
+                            </PurchaseAuthCode>
+                        ) : (
+                            <PurchaseAuthCode>
+                                {!checkSufficientFunds() && <p className="text-muted">Payment Success!</p>}
+                                <ListItem className="min-m">
+                                    <span className="key black">You purchased and used an Auth Code for</span>
+                                    <span className="value black bold">
+                                        {purchaseTokenAmount} {displayTicker}
+                                    </span>
+                                </ListItem>
+                                <p className="text-muted">{(new Date()).toString()}</p>
+                                {paymentId && (
+                                    <p className="text-muted">BUX Order #{paymentId} </p>
+                                )}
+                                <p className="text-muted">XEC transaction ID:</p>
+                                <p className="text-muted-small">
+                                    <a target="_blank" rel="noopener noreferrer" href={`https://explorer.cert.cash/tx/${tokensSent}`}>{tokensSent}</a>
+                                </p>
+                                <p className="text-red">Please screenshot or print this receipt for your records</p>
+                            </PurchaseAuthCode>
+                        )}
 
 						<HorizontalSpacer />
 
@@ -867,9 +892,17 @@ const Checkout = ({ passLoadingStatus }) => {
 							<span className="key gray">Fee:</span>
 							<span className="value gray">${(Number(exchangeAdditionalAmount) + Number(feeAmount)).toFixed(2)}</span>
 						</ListItem>
+
+                        {tokensSent && (
+                            <ListItem>
+                                <span className="key gray">Paid:</span>
+                                <span className="value gray">-${totalAmount}</span>
+                            </ListItem>
+                        )}
+
 						<ListItem>
 							<span className="key gray bold">Total:</span>
-							<span className="value gray bold">${totalAmount}</span>
+							<span className="value gray bold">${tokensSent ? 0 : totalAmount}</span>
 						</ListItem>
 					</>
 				)) || (
@@ -980,14 +1013,19 @@ const Checkout = ({ passLoadingStatus }) => {
                                     </>
                                 )}
                             </>
-                            : <Spin spinning={true} indicator={CashLoadingIcon}></Spin>
+                            : (
+                                <>
+                                    {isSending && !tokensSent ? <Spin spinning={true} indicator={CashLoadingIcon}></Spin> :
+                                    /* <PrimaryButton onClick={() => handleOk()}>Send</PrimaryButton>*/<></>}
+                                </>
+                            )
                         }
                         </>
                     )}
                 </>
             ) : (
                 <>
-                    {isSending || tokensSent ? <Spin spinning={true} indicator={CashLoadingIcon}></Spin> :
+                    {isSending && !tokensSent ? <Spin spinning={true} indicator={CashLoadingIcon}></Spin> :
                     /* <PrimaryButton onClick={() => handleOk()}>Send</PrimaryButton>*/<></>}
                 </>
             )}

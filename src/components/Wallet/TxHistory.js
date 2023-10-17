@@ -11,7 +11,7 @@ const TxHistory = ({ txs, fiatPrice, fiatCurrency }) => {
             {txs.map(tx => (
                 <TxLink
                     key={tx.txid}
-                    href={`https://explorer.be.cash/tx/${tx.txid}`}
+                    href={`https://explorer.cert.cash/tx/${tx.txid}`}
                     target="_blank"
                     rel="noreferrer"
                 >

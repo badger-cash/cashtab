@@ -16,7 +16,7 @@ export const currency = {
     etokenSats: 546,
     cashDecimals: 2,
     blockExplorerUrl: 'https://explorer.bitcoinabc.org',
-    tokenExplorerUrl: 'https://explorer.e.cash',
+    tokenExplorerUrl: 'https://explorer.cert.cash',
     blockExplorerUrlTestnet: 'https://texplorer.bitcoinabc.org',
     tokenName: 'eToken',
     tokenTicker: 'eToken',
