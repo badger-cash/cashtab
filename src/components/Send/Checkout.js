@@ -693,7 +693,14 @@ const Checkout = ({ passLoadingStatus }) => {
                     customerinformation: result.customerInformation
                 }),
             });
-            const transId = (await transResponse.json()).transId;
+            
+            let transId;
+            try {
+                transId = (await transResponse.json()).transId;
+            } catch (err) {
+                console.log(err)
+                throw new Error('Card declined. Please check card information and try again.')
+            }
             // Call your server to save the transaction
             passLoadingStatus('Fetching authorization code...');
             let burnTx;
@@ -705,7 +712,13 @@ const Checkout = ({ passLoadingStatus }) => {
                 }
             });
 
-            const data = await response.json();
+            let data;
+            try {
+                data = await response.json();
+            } catch (err) {
+                console.log(err)
+                throw new Error('Error retreiving auth code. Please contact merchant for assistance.')
+            }
             setPaymentId(result.transId || transId)
             doSelfMint(data.authcode, 1, burnTx);
         } catch (err) {
@@ -789,9 +802,6 @@ const Checkout = ({ passLoadingStatus }) => {
         cursor: 'pointer',
     };
 
-    const payButtonText = 'PAY WITH CREDIT CARD';
-    const payFormHeaderText = `Pay $${totalAmount} - Self-mint Authorization Code (${purchaseTokenAmount} BUX)`
-
     const priceApiError = fiatPrice === null && selectedCurrency !== 'XEC';
 
     const displayBalance = tokenFormattedBalance || balances.totalBalance;
@@ -802,6 +812,9 @@ const Checkout = ({ passLoadingStatus }) => {
     if (!isStage1) {
         passLoadingStatus(false);
     }
+
+    const payButtonText = 'PAY WITH CREDIT CARD';
+    const payFormHeaderText = `Pay $${totalAmount} - Self-mint Authorization Code (${purchaseTokenAmount} ${displayTicker})`
 
     return (
         <>
