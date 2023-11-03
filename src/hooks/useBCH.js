@@ -1218,6 +1218,7 @@ export default function useBCH() {
 
                 // Get required UTXOs
                 const sendRecords = slpScript.getRecords(tokenIdBuf);
+                const tokenVersion = sendRecords[0]?.version;
                 const totalBase = sendRecords.reduce((total, record) => {
                     return total.add(U64.fromBE(Buffer.from(record.value)));
                 }, U64.fromInt(0));
@@ -1276,7 +1277,8 @@ export default function useBCH() {
                     const sendTotalString = totalBase.toString();
                     const sendOpReturn = buildSendOpReturn(
                         tokenId,
-                        [sendTotalString]
+                        [sendTotalString],
+                        tokenVersion
                     );
                     const opReturnOut = {
                         script: sendOpReturn.toRaw(),
