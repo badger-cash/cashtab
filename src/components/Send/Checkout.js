@@ -266,7 +266,9 @@ const Checkout = ({ passLoadingStatus }) => {
                 .toFixed(formData.token.decimals);
             if (purchaseTokenIds.includes(formData.token?.tokenId)) {
                 // Set amount to purchase
-                let purchaseAmount = difference < 0 ? Math.abs(difference) : 0
+                // TODO allow usage of existing balance
+                // let purchaseAmount = difference < 0 ? Math.abs(difference) : 0
+                let purchaseAmount = Number(Number(formData.value).toFixed(formData.token.decimals))
                 if (purchaseAmount > 0) {
                     const rounded = Math.ceil(purchaseAmount * 100) / 100;
                     purchaseAmount = rounded < 1 ? 1 : rounded;
