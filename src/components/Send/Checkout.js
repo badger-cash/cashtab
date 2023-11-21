@@ -540,8 +540,6 @@ const Checkout = ({ passLoadingStatus }) => {
             }
         }
         
-        // Clear the address field
-        setFormData(blankFormData);
         // Manually disable loading
         passLoadingStatus(false);
     }
