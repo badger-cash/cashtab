@@ -4,7 +4,6 @@ import {
     useHistory
 } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { WalletContext } from '@utils/context';
 import {
     Form,
@@ -55,7 +54,8 @@ import {
     AgreeModal,
 } from "../../assets/styles/checkout.styles";
 import WertModule from '@wert-io/module-react-component';
-import { AcceptHosted, HostedForm } from 'react-acceptjs';
+import { HostedForm } from 'react-acceptjs';
+import GooglePayButton from "@google-pay/button-react";
 
 
 const Checkout = ({ passLoadingStatus }) => {
@@ -339,6 +339,7 @@ const Checkout = ({ passLoadingStatus }) => {
                 prInfo.paymentDetails.merchantDataJson = JSON.parse(prInfo.paymentDetails.merchantData.toString());
                 // console.log('prInfo.paymentDetails.merchantDataJson', prInfo.paymentDetails.merchantDataJson)
             } catch (err) {
+                console.error(err)
                 errorNotification(err, 
                     'Failed to fetch invoice. May be expired or invalid', 
                     `Fetching invoice: ${prInfo.url}`
@@ -668,16 +669,25 @@ const Checkout = ({ passLoadingStatus }) => {
     const authorizenetSuccess = async (result) => {
         try {
             console.log('result', result);
-            const resultCode = result.messages.resultCode
+            const resultCode = result.messages?.resultCode
             console.log('resultCode', resultCode)
             
-            if (resultCode !== 'Ok') {
+            if (resultCode && resultCode !== 'Ok') {
                 console.log(`authorize.net responseCode ${result.responseCode}`)
                 passLoadingStatus(false);
                 return;
             }
 
             passLoadingStatus('Processing payment information...');
+            divRef.current.scrollIntoView();
+            let type = 'cc';
+            if (!resultCode && result.paymentMethodData?.tokenizationData) {
+                type = 'googlepay';
+                result.opaqueData = {
+                    dataDescriptor: 'COMMON.GOOGLE.INAPP.PAYMENT',
+                    dataValue: btoa(result.paymentMethodData?.tokenizationData.token)
+                };
+            }
             const tokenUrl = `https://${isSandbox ? 'dev-api.' : ''}bux.digital/v2/authpaymenttransaction`;
             const transResponse = await fetch(tokenUrl, {
                 method: 'POST',
@@ -690,7 +700,8 @@ const Checkout = ({ passLoadingStatus }) => {
                     address: wallet.Path1899.slpAddress,
                     prurl: prInfoFromUrl.url,
                     opaquedata: result.opaqueData,
-                    customerinformation: result.customerInformation
+                    customerinformation: result.customerInformation,
+                    type
                 }),
             });
             
@@ -886,7 +897,7 @@ const Checkout = ({ passLoadingStatus }) => {
                                 )}
                                 <p className="text-muted">XEC transaction ID:</p>
                                 <p className="text-muted-small">
-                                    <a target="_blank" rel="noopener noreferrer" href={`https://explorer.cert.cash/tx/${tokensSent}`}>{tokensSent}</a>
+                                    <a target="_blank" rel="noopener noreferrer" href={`https://explorer.e.cash/tx/${tokensSent}`}>{tokensSent}</a>
                                 </p>
                                 <p className="text-red">Please screenshot or print this receipt for your records</p>
                             </PurchaseAuthCode>
@@ -995,34 +1006,67 @@ const Checkout = ({ passLoadingStatus }) => {
                                     />
                                 ) : (
                                     <>
-                                    <HostedForm 
-                                        authData={{
-                                            apiLoginID: isSandbox ? '25W2mLe5' : '469zGVDrekmC',
-                                            clientKey: isSandbox ? '8TEqfrHqLh4UWqUY8Sf3H8fq5PyczM9gqfV927Rq8Q5eFwVs2P8UYn7H8MK8Fy4T' : '74AUbX9mjmMFFBs38EG8q46dEaxNy9kC6p8rK4f33nw6yGhFn6g62vrX5d2KGAQ8'
-                                        }} 
-                                        onSubmit={authorizenetSuccess}
-                                        environment={isSandbox ? 'SANDBOX' : 'PRODUCTION'}
-                                        billingAddressOptions={{show: true, required: true}}
-                                        buttonStyle={payButtonStyle}
-                                        buttonText={payButtonText}
-                                        formHeaderText={payFormHeaderText}
-                                    />
-                                    {/* <AcceptHosted
-                                        formToken={formToken}
-                                        integration="iframe"
-                                        onTransactionResponse={authorizenetSuccess}
-                                        environment={isSandbox ? 'SANDBOX' : 'PRODUCTION'}
-                                    >
-                                        <AcceptHosted.Button 
-                                        style={payButtonStyle}
-                                        >
-                                            {payButtonText}}
-                                        </AcceptHosted.Button>
-                                        <AcceptHosted.IFrameBackdrop />
-                                        <AcceptHosted.IFrameContainer>
-                                            <AcceptHosted.IFrame />
-                                        </AcceptHosted.IFrameContainer>
-                                    </AcceptHosted> */}
+                                        {isSandbox && (
+                                            <>
+                                                <HostedForm 
+                                                    authData={{
+                                                        apiLoginID: isSandbox ? '25W2mLe5' : '469zGVDrekmC',
+                                                        clientKey: isSandbox ? '8TEqfrHqLh4UWqUY8Sf3H8fq5PyczM9gqfV927Rq8Q5eFwVs2P8UYn7H8MK8Fy4T' : '74AUbX9mjmMFFBs38EG8q46dEaxNy9kC6p8rK4f33nw6yGhFn6g62vrX5d2KGAQ8'
+                                                    }} 
+                                                    onSubmit={authorizenetSuccess}
+                                                    environment={isSandbox ? 'SANDBOX' : 'PRODUCTION'}
+                                                    billingAddressOptions={{show: true, required: true}}
+                                                    buttonStyle={payButtonStyle}
+                                                    buttonText={payButtonText}
+                                                    formHeaderText={payFormHeaderText}
+                                                />
+
+                                                <GooglePayButton
+                                                    environment={isSandbox ? 'TEST' : 'PRODUCTION'}
+                                                    buttonColor="default"
+                                                    buttonType="buy"
+                                                    buttonSizeMode="fill"
+                                                    paymentRequest={{
+                                                        apiVersion: 2,
+                                                        apiVersionMinor: 0,
+                                                        allowedPaymentMethods: [
+                                                        {
+                                                            type: "CARD",
+                                                            parameters: {
+                                                                allowedAuthMethods: ["PAN_ONLY", "CRYPTOGRAM_3DS"],
+                                                                allowedCardNetworks: ["MASTERCARD", "VISA", "AMEX"]
+                                                            },
+                                                            tokenizationSpecification: {
+                                                                type: "PAYMENT_GATEWAY",
+                                                                parameters: {
+                                                                    gateway: "authorizenet",
+                                                                    gatewayMerchantId: isSandbox ? "873125" : "2601218"
+                                                                }
+                                                            }
+                                                        }
+                                                        ],
+                                                        merchantInfo: {
+                                                            merchantId: "BCR2DN4TY24ZBPKF",
+                                                            merchantName: "Badger LLC"
+                                                        },
+                                                        transactionInfo: {
+                                                        totalPriceStatus: "FINAL",
+                                                        totalPriceLabel: "Total",
+                                                        totalPrice: `${totalAmount}`,
+                                                        currencyCode: "USD",
+                                                        countryCode: "US"
+                                                        }
+                                                    }}
+                                                    onLoadPaymentData={authorizenetSuccess}
+                                                    style={{ width: '80%', height: '68px' }}
+                                                />
+                                            </>
+                                        )}
+                                        {!isSandbox && (
+                                            <p className="text-red" style={{ color: 'red'}}>
+                                                Purchase via credit card is not available at this time.
+                                            </p>
+                                        )}
                                     </>
                                 )}
                             </>
